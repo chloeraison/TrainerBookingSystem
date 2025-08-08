@@ -1,0 +1,36 @@
+@page
+@model TrainerBookingSystem.Web.Pages.DashboardModel
+@{
+    ViewData["Title"] = "Trainer Dashboard";
+}
+
+<h1>📋 Trainer Dashboard</h1>
+
+@if (Model.Bookings.Any())
+{
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+    <thead>
+        <tr style="border-bottom: 2px solid #ccc;">
+            <th style="text-align: left; padding: 10px;">Client</th>
+            <th style="text-align: left; padding: 10px;">Date</th>
+            <th style="text-align: left; padding: 10px;">Time</th>
+            <th style="text-align: left; padding: 10px;">Session Type</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var booking in Model.Bookings)
+        {
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px;">@booking.Client?.Name</td>
+                <td style="padding: 10px;">@booking.Date.ToString("ddd dd MMM")</td>
+                <td style="padding: 10px;">@booking.StartTime.ToString(@"hh\:mm")</td>
+                <td style="padding: 10px;">@booking.SessionType</td>
+            </tr>
+        }
+    </tbody>
+    </table>
+}
+else
+{
+    <p>No bookings yet for this week.</p>
+}

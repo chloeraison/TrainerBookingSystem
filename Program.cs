@@ -26,4 +26,10 @@ app.UseAuthorization();
 
 app.MapRazorPages(); // This loads your Pages/*.cshtml
 
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    DummyData.Seed(context);
+}
+
 app.Run();
