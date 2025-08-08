@@ -1,0 +1,20 @@
+# Build and publish folders
+/bin/
+/obj/
+
+# User-specific files
+.vscode/
+*.user
+*.suo
+
+# Database file
+*.db
+
+# Logs
+*.log
+
+# EF Core files
+Migrations/
+
+# Secrets
+appsettings.Development.json
