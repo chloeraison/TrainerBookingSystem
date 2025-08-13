@@ -24,7 +24,7 @@ app.UseStaticFiles(); // <-- Needed to serve CSS/JS/static files
 app.UseRouting();
 app.UseAuthorization();
 
-app.MapRazorPages(); // This loads your Pages/*.cshtml
+app.MapRazorPages(); // This loads Pages/*.cshtml
 
 using (var scope = app.Services.CreateScope())
 {

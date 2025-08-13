@@ -2,6 +2,86 @@ html {
   font-size: 14px;
 }
 
+/* ---- Theme variables ---- */
+:root {
+  --bg: #ffffff;
+  --text: #111318;
+  --muted: #666a73;
+  --card: #ffffff;
+  --border: #e6e6e9;
+  --accent: #5b5bd6;         /* existing accent (links) for light */
+  --accent-contrast: #ffffff;
+  --pill-bg: #eef;
+  --pill-border: #d6dbff;
+}
+
+/* Dark theme: off-black base with red accent */
+:root[data-theme="dark"] {
+  --bg: #0f0f12;             /* off-black */
+  --text: #e7e7e9;
+  --muted: #b0b2b8;
+  --card: #16161a;
+  --border: #26262b;
+  --accent: #e24b4b;         /* red */
+  --accent-contrast: #1a0f10;
+  --pill-bg: #2a1414;        /* subtle red-tinted pill? */
+  --pill-border: #402020;
+}
+
+/* Respect user's OS preference initially (can be overridden by toggle) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f0f12;
+    --text: #e7e7e9;
+    --muted: #b0b2b8;
+    --card: #16161a;
+    --border: #26262b;
+    --accent: #e24b4b;
+    --accent-contrast: #1a0f10;
+    --pill-bg: #2a1414;
+    --pill-border: #402020;
+  }
+}
+
+/* ---- Global application of variables ---- */
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+a { color: var(--accent); }
+a:hover { opacity: .9; }
+
+hr, .border, table, th, td {
+  border-color: var(--border) !important;
+}
+
+.card, section, table, .box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.badge {
+  font-size: .8rem;
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+/* Tab underline color */
+.nav-tabs a[style*="border-bottom:3px solid"] {
+  border-bottom-color: var(--accent) !important;
+}
+
+/* Button baseline used by the theme toggle */
+.btn {
+  display:inline-block; padding:6px 10px; border:1px solid var(--border);
+  border-radius:8px; text-decoration:none; background:var(--card); color:var(--text);
+}
+
+
 @media (min-width: 768px) {
   html {
     font-size: 16px;
@@ -28,4 +108,16 @@ body {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
+}
+
+/* Light theme */
+body.light-mode {
+    background-color: white;
+    color: black;
+}
+
+/* Dark theme */
+body.dark-mode {
+    background-color: #121212;
+    color: white;
 }
