@@ -1,82 +1,78 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-
-<head>
+﻿<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - TrainerBookingSystem.Web</title>
-    <script type="importmap"></script>
+
+    <!-- ✅ Bootstrap first -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <!-- ✅ Your theme overrides and custom styles -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/TrainerBookingSystem.Web.styles.css" asp-append-version="true" />
 </head>
 
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-3"
-            style="background: var(--card); color: var(--text); border-color: var(--border);">
+    <div class="d-flex flex-column min-vh-100">
 
-            <a href="#" id="themeToggle" class="btn" style="margin-left:12px;">Toggle theme</a>
-
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">TrainerBookingSystem.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
-                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Privacy">Privacy</a>
-                        </li>
-                    </ul>
+        <!-- Header OUTSIDE the content wrapper -->
+        <header>
+            <nav class="navbar navbar-expand-sm border-bottom box-shadow mb-3"
+                style="background: var(--card); color: var(--text); border-color: var(--border); padding: 0.6rem 1rem;">
+                <div class="container-fluid d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <a class="nav-link text-light fw-bold" asp-page="/Dashboard">Calendar</a>
+                        <a class="nav-link text-light fw-bold" asp-page="/Clients">Clients</a>
+                        <a class="nav-link text-light fw-bold" asp-page="/Management">Management</a>
+                    </div>
+                    <div class="top-nav-brand"></div>
+                    <button id="themeToggle" class="btn" style="padding: 6px 10px; border-radius: 12px;">
+                        <span id="themeIcon">☀️</span>
+                    </button>
                 </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+            </nav>
+        </header>
+
+        <!-- Everything else -->
+        <div class="content-wrapper d-flex flex-column flex-grow-1">
+            <main class="container pb-3 flex-grow-1">
+                @RenderBody()
+            </main>
+
+@*             <footer class="footer text-muted mt-auto"
+                style="background: var(--card); padding: 10px 0; border-top: 1px solid var(--border);">
+                <div class="container d-flex justify-content-between align-items-center flex-wrap">
+                    <div>© 2025 - CoachTibbles</div>
+                    <div><a asp-area="" asp-page="/Privacy">Privacy</a></div>
+                </div>
+            </footer> *@
+        </div>
+
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - TrainerBookingSystem.Web - <a asp-area="" asp-page="/Privacy">Privacy</a>
-        </div>
-    </footer>
-
+    <!-- Scripts -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-
     @await RenderSectionAsync("Scripts", required: false)
 
-    <<script>
-  (function () {
-    // Apply stored preference if present
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark' || saved === 'light') {
-      document.documentElement.setAttribute('data-theme', saved);
-    }
+    <!-- Theme Script -->
+    <script>
+        (function () {
+            const saved = localStorage.getItem('theme');
+            const root = document.documentElement;
+            if (saved === 'dark' || saved === 'light') {
+                root.setAttribute('data-theme', saved);
+                document.getElementById('themeIcon').textContent = saved === 'dark' ? '☀️' : '🌙';
+            }
 
-    const toggle = document.getElementById('themeToggle');
-    if (toggle) {
-      toggle.addEventListener('click', function (e) {
-        e.preventDefault();
-        const root = document.documentElement;
-        const current = root.getAttribute('data-theme'); // "dark" | "light" | null
-        const next = current === 'dark' ? 'light' : 'dark';
-        root.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-      });
-    }
-  })();
-</script>
-
+            document.getElementById('themeToggle')?.addEventListener('click', function (e) {
+                e.preventDefault();
+                const current = root.getAttribute('data-theme');
+                const next = current === 'dark' ? 'light' : 'dark';
+                root.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                document.getElementById('themeIcon').textContent = next === 'dark' ? '☀️' : '🌙';
+            });
+        })();
+    </script>
 </body>
-
-</html>

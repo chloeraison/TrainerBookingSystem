@@ -6,15 +6,17 @@ public static class DummyData
 {
     public static void Seed(AppDbContext context)
     {
+        context.Database.EnsureDeleted(); // WARNING: This deletes all data. Use only for dev/testing.
+        context.Database.EnsureCreated();
         // Ensure baseline clients exist (idempotent enough for dev)
         if (!context.Clients.Any())
         {
             context.Clients.AddRange(
-                new Client { Name = "Alice Johnson", IsFixedBooking = true },
-                new Client { Name = "Ben Carter", IsFixedBooking = false },
-                new Client { Name = "Chloe Sharkperson", IsFixedBooking = false },
-                new Client { Name = "Diego Park", IsFixedBooking = true },
-                new Client { Name = "Eva Lin", IsFixedBooking = false }
+                new Client { Name = "Ash Ketchum"},
+                new Client { Name = "Tony Stark" },
+                new Client { Name = "SharkMan, The "},
+                new Client { Name = "That banana guy 🍌"},
+                new Client { Name = "Chloe Kelly"}
             );
             context.SaveChanges();
         }

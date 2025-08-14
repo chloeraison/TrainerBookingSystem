@@ -1,0 +1,123 @@
+@page "{id:int}"
+@model TrainerBookingSystem.Web.Pages.DetailsModel
+@{
+    ViewData["Title"] = "Client";
+}
+
+<section class="client-header">
+    <a asp-page="/Clients" class="btn btn-ghost">← Back to Clients</a>
+    <h1>👤 @Model.Client?.Name</h1>
+
+    <div class="quick-actions">
+        @* Only show WhatsApp if you add a phone later *@
+        @if (!string.IsNullOrWhiteSpace(Model.Client?.Phone))
+        {
+            <a class="btn" href="https://wa.me/@Model.Client!.Phone" target="_blank" rel="noopener">💬 WhatsApp</a>
+        }
+
+        <a class="btn btn-accent"
+           asp-page="/Bookings/Create"
+           asp-route-clientId="@Model.Client?.Id">＋ New booking</a>
+
+        <a class="btn"
+           asp-page="/Clients/Edit"
+           asp-route-id="@Model.Client?.Id">✏️ Edit</a>
+    </div>
+</section>
+
+<div class="client-details-grid">
+    <section class="card">
+        <h2>🧾 Overview</h2>
+        <div class="kv">
+            <div>🏋️ Gym</div>
+            <div>@(Model.Client?.Gym ?? "—")</div>
+
+            <div>🕒 Pref. time</div>
+            <div>
+                @foreach (var chip in Model.PreferredTimeChips)
+                {
+                    <span class="chip">@chip</span>
+                }
+                @if (!Model.PreferredTimeChips.Any())
+                {
+                    <span class="muted">—</span>
+                }
+            </div>
+
+            <div>📌 Notes</div>
+            <div>@(string.IsNullOrWhiteSpace(Model.Client?.Flags) ? "—" : Model.Client!.Flags)</div>
+
+            <div>🌴 Holiday</div>
+            <div>@(Model.HolidayText ?? "—")</div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>📊 This week / month</h2>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-num">@Model.WeekCount</div>
+                <div class="stat-label">Sessions this week</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">@Model.MonthCount</div>
+                <div class="stat-label">Sessions this month</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card span-2">
+        <h2>📅 Upcoming</h2>
+        @if (!Model.Upcoming.Any())
+        {
+            <p class="muted">No upcoming bookings.</p>
+        }
+        else
+        {
+            <ul class="booking-list">
+                @foreach (var b in Model.Upcoming)
+                {
+                    <li class="booking-item">
+                        <div class="b-time">
+                            @b.Date.ToString("ddd dd MMM") · @b.StartTime.ToString(@"hh\:mm")
+                        </div>
+                        <div class="b-type">
+                            @($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")
+                        </div>
+                        <div class="b-actions">
+                            <a class="btn btn-sm" asp-page="/Bookings/Edit" asp-route-id="@b.Id">✏️ Edit</a>
+                            <a class="btn btn-sm btn-ghost" asp-page="/Bookings/Details" asp-route-id="@b.Id">🔍 View</a>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section class="card span-2">
+        <h2>🗂️ Recent (last 10)</h2>
+        @if (!Model.Recent.Any())
+        {
+            <p class="muted">No recent history.</p>
+        }
+        else
+        {
+            <ul class="booking-list compact">
+                @foreach (var b in Model.Recent)
+                {
+                    <li class="booking-item">
+                        <div class="b-time">
+                            @b.Date.ToString("ddd dd MMM") · @b.StartTime.ToString(@"hh\:mm")
+                        </div>
+                        <div class="b-type">
+                            @($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")
+                        </div>
+                        <div class="b-actions">
+                            <a class="btn btn-sm btn-ghost" asp-page="/Bookings/Details" asp-route-id="@b.Id">🔍 View</a>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>

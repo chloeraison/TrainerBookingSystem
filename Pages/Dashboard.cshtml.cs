@@ -6,104 +6,134 @@ using TrainerBookingSystem.Web.Models;
 
 namespace TrainerBookingSystem.Web.Pages;
 
-public enum DashboardView { List, Calendar, Tick, Month, Day }
-
 public class DashboardModel : PageModel
 {
     private readonly AppDbContext _context;
     public DashboardModel(AppDbContext context) => _context = context;
 
-    // Which tab is selected
-    public DashboardView SelectedView { get; set; } = DashboardView.List;
+    // Month being shown
+    [BindProperty(SupportsGet = true)] public int? year { get; set; }
+    [BindProperty(SupportsGet = true)] public int? month { get; set; }
 
-    // Raw bookings for the current week (or for a selected day)
-    public List<Booking> Bookings { get; set; } = new();
+    // CSV of yyyy-MM-dd selected days (multi-select)
+    [BindProperty(SupportsGet = true)] public string? selected { get; set; }
 
-    // Grouped view for List/Calendar (Mon→Sun)
-    public Dictionary<DateTime, List<Booking>> WeekByDay { get; set; } = new();
+    public int VisibleYear { get; private set; }
+    public int VisibleMonth { get; private set; }
+    public DateTime FirstOfMonth { get; private set; }
+    public List<MonthDayCell> MonthCells { get; private set; } = new();
 
-    // Tick list
-    public List<ClientStatus> ClientStatuses { get; set; } = new();
-
-    // Query-string
-    [BindProperty(SupportsGet = true)] public DashboardView? view { get; set; }
-    [BindProperty(SupportsGet = true)] public bool showUnbookedOnly { get; set; } = false;
-    [BindProperty(SupportsGet = true)] public DateTime? date { get; set; }
-
-    public DateTime StartOfWeek { get; private set; }
-    public DateTime EndOfWeek   { get; private set; }
+    public HashSet<DateTime> SelectedDates { get; private set; } = new();
+    public List<Booking> SelectedBookings { get; private set; } = new();
 
     public async Task OnGetAsync()
     {
-        SelectedView = view ?? DashboardView.List;
-
-        // show this week (Mon..Sun)
+        // determine visible month
         var today = DateTime.Today;
-        int offsetToMonday = ((int)today.DayOfWeek + 6) % 7;
-        StartOfWeek = today.AddDays(-offsetToMonday).Date;
-        EndOfWeek   = StartOfWeek.AddDays(6).Date;
+        VisibleYear = year ?? today.Year;
+        VisibleMonth = month ?? today.Month;
+        FirstOfMonth = new DateTime(VisibleYear, VisibleMonth, 1);
 
-        if (SelectedView == DashboardView.Tick)
+        // build month grid (start Monday, 6 rows)
+        var start = FirstOfMonth;
+        int offsetToMon = ((int)start.DayOfWeek + 6) % 7;
+        var gridStart = start.AddDays(-offsetToMon);
+        for (int i = 0; i < 42; i++)
         {
-            // who is booked this week?
-            var weekBookings = await _context.Bookings
-                .Where(b => b.IsConfirmed && b.Date >= StartOfWeek && b.Date <= EndOfWeek)
+            var d = gridStart.AddDays(i).Date;
+            MonthCells.Add(new MonthDayCell
+            {
+                Date = d,
+                InCurrentMonth = d.Month == VisibleMonth
+            });
+        }
+
+        // parse selected dates
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            foreach (var part in selected.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (DateTime.TryParse(part, out var dt))
+                    SelectedDates.Add(dt.Date);
+            }
+        }
+
+        // pre-load counts for the month
+        var monthEnd = FirstOfMonth.AddMonths(1);
+        var monthBookings = await _context.Bookings
+            .Where(b => b.IsConfirmed && b.Date >= FirstOfMonth && b.Date < monthEnd)
+            .ToListAsync();
+
+        var counts = monthBookings
+            .GroupBy(b => b.Date.Date)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // FIX: can't use a property as an out param — read into a local first
+        foreach (var c in MonthCells)
+        {
+            if (counts.TryGetValue(c.Date, out var n))
+                c.BookingCount = n;
+        }
+
+
+        if (SelectedDates.Count > 0)
+        {
+            var min = SelectedDates.Min();
+            var max = SelectedDates.Max().AddDays(1); // exclusive upper bound
+
+            // Get from DB first…
+            var list = await _context.Bookings
+                .Where(b => b.IsConfirmed && b.Date >= min && b.Date < max)
                 .Include(b => b.Client)
                 .ToListAsync();
 
-            var bookedByClient = weekBookings
-                .GroupBy(b => b.ClientId)
-                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Date).ThenBy(x => x.StartTime).ToList());
+            // …then order in-memory to avoid SQLite TimeSpan ORDER BY
+            SelectedBookings = list
+                .OrderBy(b => b.Date)
+                .ThenBy(b => b.StartTime)   // TimeSpan — now safe (in-memory)
+                .ToList();
 
-            var clients = await _context.Clients.OrderBy(c => c.Name).ToListAsync();
-
-            ClientStatuses = clients.Select(c =>
-            {
-                bookedByClient.TryGetValue(c.Id, out var list);
-                var lines = (list ?? new List<Booking>()).Select(b =>
-                    $"{b.Date:ddd dd MMM} {b.StartTime:hh\\:mm} · {b.SessionType}");
-                var text = lines.Any()
-                    ? $"Your hours this week:\n" + string.Join("\n", lines)
-                    : "No confirmed session yet this week. Please send preferred times 🙂";
-
-                return new ClientStatus
-                {
-                    Client = c,
-                    IsBookedThisWeek = (list?.Any() ?? false),
-                    ScheduleText = text
-                };
-            })
-            .Where(cs => !showUnbookedOnly || !cs.IsBookedThisWeek)
-            .ToList();
-
-            return;
+            // filter to only exact selected days (we fetched by range above)
+            SelectedBookings = SelectedBookings
+                .Where(b => SelectedDates.Contains(b.Date.Date))
+                .ToList();
         }
 
-        // Default for List/Calendar/Day: load confirmed bookings for this week
-        Bookings = await _context.Bookings
-            .Where(b => b.IsConfirmed && b.Date >= StartOfWeek && b.Date <= EndOfWeek)
-            .Include(b => b.Client)
-            .OrderBy(b => b.Date)
-            .ToListAsync();
-
-        // Secondary sort by TimeSpan in memory (SQLite quirk)
-        Bookings = Bookings.OrderBy(b => b.StartTime).ToList();
-
-        WeekByDay = Enumerable.Range(0, 7)
-            .Select(i => StartOfWeek.AddDays(i))
-            .ToDictionary(
-                d => d,
-                d => Bookings.Where(b => b.Date.Date == d.Date)
-                             .OrderBy(b => b.StartTime)
-                             .ToList()
-            );
+        // Build cards for each selected day (show even when there are zero bookings)
+        SelectedDayCards = SelectedDates
+            .OrderBy(d => d)
+            .Select(d => new DayCard
+            {
+                Date = d,
+                Bookings = SelectedBookings
+                    .Where(b => b.Date.Date == d.Date)
+                    .OrderBy(b => b.StartTime)
+                    .ToList()
+            })
+            .ToList();
     }
-}
+    public class DayCard
+    {
+        public DateTime Date { get; set; }
+        public List<Booking> Bookings { get; set; } = new();
+    }
 
-// Tick list item
-public class ClientStatus
-{
-    public Client Client { get; set; } = null!;
-    public bool IsBookedThisWeek { get; set; }
-    public string ScheduleText { get; set; } = "";
+    public List<DayCard> SelectedDayCards { get; private set; } = new();
+
+
+    // Helper to build a new CSV after toggling one day
+    public string ToggleSelection(DateTime day)
+    {
+        var set = new HashSet<DateTime>(SelectedDates);
+        if (set.Contains(day.Date)) set.Remove(day.Date);
+        else set.Add(day.Date);
+        return string.Join(',', set.OrderBy(d => d).Select(d => d.ToString("yyyy-MM-dd")));
+    }
+
+    public class MonthDayCell
+    {
+        public DateTime Date { get; set; }
+        public bool InCurrentMonth { get; set; }
+        public int BookingCount { get; set; }
+    }
 }

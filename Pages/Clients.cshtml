@@ -1,0 +1,37 @@
+@page
+@model ClientsModel
+@{
+    ViewData["Title"] = "Clients";
+}
+
+<section>
+    <h1>👥 Clients</h1>
+
+    <a class="btn mb-3" asp-page="/Clients/Add">➕ Add New Client</a>
+
+    <div class="table-responsive">
+        <table class="table client-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>🏋️ Gym</th>
+                    <th>🕒 Pref. Time</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in Model.Clients)
+                {
+                    <tr>
+                        <td>@client.Name</td>
+                        <td>@client.Gym</td>
+                        <td>@client.PreferredTimes</td>
+                        <td>
+                            <a class="btn btn-sm" asp-page="/Details" asp-route-id="@client.Id">🔍 View</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

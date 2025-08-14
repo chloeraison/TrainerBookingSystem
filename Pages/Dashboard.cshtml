@@ -2,153 +2,218 @@
 @model TrainerBookingSystem.Web.Pages.DashboardModel
 @{
     ViewData["Title"] = "Trainer Dashboard";
-    string tabClass(bool active) => active
-        ? "display:inline-block;padding:8px 12px;border-bottom:3px solid var(--accent);font-weight:600;"
-        : "display:inline-block;padding:8px 12px;border-bottom:3px solid transparent;color:var(--muted);";
+
+    // Prev / next month labels & targets
+    int prevY = (Model.VisibleMonth == 1) ? Model.VisibleYear - 1 : Model.VisibleYear;
+    int prevM = (Model.VisibleMonth == 1) ? 12 : Model.VisibleMonth - 1;
+    int nextY = (Model.VisibleMonth == 12) ? Model.VisibleYear + 1 : Model.VisibleYear;
+    int nextM = (Model.VisibleMonth == 12) ? 1 : Model.VisibleMonth + 1;
+
+    string header = new DateTime(Model.VisibleYear, Model.VisibleMonth, 1).ToString("MMMM yyyy");
+    string prevLabel = new DateTime(prevY, prevM, 1).ToString("MMM yyyy");
+    string nextLabel = new DateTime(nextY, nextM, 1).ToString("MMM yyyy");
 }
 
-<h1 style="margin-bottom:6px;">Trainer Dashboard</h1>
-<p style="color:var(--muted);margin-top:0;">This week</p>
+<div class="dashboard-page-content">
+    <h1 style="margin-bottom:10px;">Trainer Dashboard</h1>
 
-<nav style="border-bottom:1px solid var(--border);margin-bottom:16px;">
-    <a asp-page="/Dashboard" asp-route-view="List"     style="@tabClass(Model.SelectedView == DashboardView.List)">List</a>
-    <a asp-page="/Dashboard" asp-route-view="Calendar" style="@tabClass(Model.SelectedView == DashboardView.Calendar)">Calendar</a>
-    <a asp-page="/Dashboard" asp-route-view="Tick"     style="@tabClass(Model.SelectedView == DashboardView.Tick)">Tick list</a>
-</nav>
+    <div style="display:flex;gap:18px;align-items:center;margin-bottom:10px;">
+        <a class="btn" asp-page="/Dashboard" asp-route-year="@prevY" asp-route-month="@prevM"
+            asp-route-selected="@Model.selected">
+            ← @prevLabel
+        </a>
 
-<!-- LIST: grouped by day -->
-@if (Model.SelectedView == DashboardView.List)
-{
-    if (!Model.Bookings.Any())
-    {
-        <p>No bookings yet for this week.</p>
-    }
-    else
-    {
-        foreach (var day in Model.WeekByDay)
-        {
-            <section class="card" style="padding:12px;margin-bottom:12px;">
-                <h3 style="margin:0 0 8px 0;">@day.Key:dddd dd MMM</h3>
+        <div style="font-weight:800;font-size:22px;">@header</div>
 
-                @if (!day.Value.Any())
-                {
-                    <div style="color:var(--muted);">— no sessions —</div>
-                }
-                else
-                {
-                    <div style="display:grid;grid-template-columns: 110px 1fr 160px;gap:8px;">
-                        @foreach (var b in day.Value)
-                        {
-                            <div style="font-weight:600;">@b.StartTime:hh\\:mm</div>
-                            <div>@b.Client?.Name<br /><span style="color:var(--muted);">@b.SessionType</span></div>
-                            <div>
-                                <span class="badge">Confirmed</span>
-                                <a asp-page="/Bookings/Create" asp-route-date="@b.Date.ToString("yyyy-MM-dd")"
-                                   class="btn" style="margin-left:6px;">+ Add</a>
-                            </div>
-                        }
-                    </div>
-                }
-            </section>
-        }
-    }
-}
+        <a class="btn" asp-page="/Dashboard" asp-route-year="@nextY" asp-route-month="@nextM"
+            asp-route-selected="@Model.selected">
+            @nextLabel →
+        </a>
+    </div>
 
-<!-- CALENDAR (WEEK GRID): Mon..Sun columns -->
-@if (Model.SelectedView == DashboardView.Calendar)
-{
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;">
-        @foreach (var day in Model.WeekByDay)
-        {
-            <div class="card" style="padding:10px;min-height:140px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <strong>@day.Key:ddd dd</strong>
-                    <a asp-page="/Bookings/Create" asp-route-date="@day.Key.ToString("yyyy-MM-dd")" class="btn" title="Add">+ Add</a>
-                </div>
-
-                @if (!day.Value.Any())
-                {
-                    <div style="color:var(--muted);font-size:.95rem;">— free —</div>
-                }
-                else
-                {
-                    <div style="display:flex;flex-direction:column;gap:6px;">
-                        @foreach (var b in day.Value)
-                        {
-                            <div class="card" style="padding:8px;">
-                                <div style="font-weight:700;">@b.StartTime:hh\\:mm · @b.Client?.Name</div>
-                                <div style="color:var(--muted);">@b.SessionType</div>
-                            </div>
-                        }
-                    </div>
-                }
+    <div class="dashboard-layout">
+        <!-- LEFT: Month calendar -->
+        <section>
+            <div class="cal-weekdays">
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+                <div>Sun</div>
             </div>
+    </div>
+
+    <div class="cal-grid">
+        @foreach (var cell in Model.MonthCells)
+        {
+            var isSelected = Model.SelectedDates.Contains(cell.Date.Date);
+            var toggle = Model.ToggleSelection(cell.Date);
+
+            <a class="cal-cell @(cell.InCurrentMonth ? "" : "muted") @(isSelected ? "selected" : "")" asp-page="/Dashboard"
+                asp-route-year="@Model.VisibleYear" asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle"
+                title="@cell.Date.ToString("dddd dd MMM")">
+
+                <div class="cal-date">@cell.Date.Day</div>
+
+                @if (cell.BookingCount > 0)
+                {
+                    <div class="cal-count">@cell.BookingCount</div>
+                }
+            </a>
         }
     </div>
-}
 
-<!-- TICK LIST: who is booked this week + copy message -->
-@if (Model.SelectedView == DashboardView.Tick)
-{
-    <form method="get" style="margin-bottom:10px;">
-        <input type="hidden" name="view" value="Tick" />
-        <label style="display:inline-flex;align-items:center;gap:6px;">
-            <input type="checkbox" name="showUnbookedOnly" value="true" @(Model.showUnbookedOnly ? "checked" : "") />
-            Show unbooked only
-        </label>
-        <button class="btn" style="margin-left:8px;">Apply</button>
-    </form>
+    <p style="color:var(--muted);margin-top:8px;">
+        Tip: click multiple days to compare on the right.
+    </p>
+    </section>
 
-    @if (!Model.ClientStatuses.Any())
-    {
-        <p>No clients yet.</p>
-    }
-    else
-    {
-        <table class="table">
-            <thead>
-                <tr><th style="width:40%;">Client</th><th>Status</th><th style="width:40%;">Actions</th></tr>
-            </thead>
-            <tbody>
-            @foreach (var cs in Model.ClientStatuses)
+    <!-- RIGHT: Selected days panel -->
+    <aside class="card side-panel">
+        <h3 style="margin-top:0;">Selected days</h3>
+
+        @if (Model.SelectedDates.Count == 0)
+        {
+            <p style="color:var(--muted);">No days selected. Click days in the calendar to compare.</p>
+        }
+        else
+        {
+            <!-- chips for each selected day + Clear all -->
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+                @foreach (var d in Model.SelectedDates.OrderBy(d => d))
+                {
+                    var toggle = Model.ToggleSelection(d);
+                    <a class="badge" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
+                        asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle" title="Unselect">
+                        @d.ToString("ddd dd MMM") ✕
+                    </a>
+                }
+
+                <!-- Clear all -->
+                <a class="badge" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
+                    asp-route-month="@Model.VisibleMonth" asp-route-selected="">
+                    Clear all
+                </a>
+            </div>
+
+            <!-- day cards -->
+            @foreach (var card in Model.SelectedDayCards)
             {
-                var status = cs.IsBookedThisWeek ? "Booked" : "Not booked";
-                <tr>
-                    <td>@cs.Client.Name</td>
-                    <td>
-                        <span class="badge" style="@(cs.IsBookedThisWeek ? "" : "opacity:.75;")">@status</span>
-                    </td>
-                    <td>
-                        <!-- Copy 'your hours this week' message -->
-                        <button type="button" class="btn copy-btn"
-                                data-text="@cs.ScheduleText.Replace("\"","&quot;").Replace("\n","&#10;")">
-                            Copy message
-                        </button>
+                var toggle = Model.ToggleSelection(card.Date);
 
-                        <!-- WhatsApp link with prefilled text (desktop/mobile) -->
-                        <a class="btn" style="margin-left:6px;"
-                           href="https://wa.me/?text=@Uri.EscapeDataString(cs.ScheduleText)" target="_blank" rel="noopener">
-                            WhatsApp
-                        </a>
-                    </td>
-                </tr>
+                <div class="card" style="padding:10px;margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <div style="font-weight:800;">@card.Date.ToString("dddd dd MMM")</div>
+
+                        <div style="display:flex;gap:6px;">
+                            <!-- unselect this day -->
+                            <a class="btn" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
+                                asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle">
+                                Unselect
+                            </a>
+
+                            <!-- quick add booking for this day (prefill date) -->
+                            <a class="btn" asp-page="/Bookings/Create" asp-route-date="@card.Date.ToString("yyyy-MM-dd")">
+                                + Add
+                            </a>
+                        </div>
+                    </div>
+
+                    @if (!card.Bookings.Any())
+                    {
+                        <div style="color:var(--muted);">No bookings yet.</div>
+                    }
+                    else
+                    {
+                        <div style="display:flex;flex-direction:column;gap:6px;">
+                            @foreach (var b in card.Bookings.OrderBy(b => b.StartTime))
+                            {
+                                <div class="card" style="padding:8px;">
+                                    <div style="font-weight:700;">
+                                        @b.StartTime.ToString(@"hh\:mm") · @b.Client?.Name
+                                    </div>
+                                    <div style="color:var(--muted);">
+                                        @b.SessionType (@(b.Duration.TotalMinutes) mins)
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
             }
-            </tbody>
-        </table>
-    }
-}
+        }
+    </aside>
+</div>
 
-@section Scripts {
-<script>
-  // Copies the schedule text into clipboard
-  document.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const text = btn.getAttribute('data-text');
-      navigator.clipboard.writeText(text).then(() => {
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy message', 1200);
-      });
-    });
-  });
-</script>
-}
+<style>
+    .cal-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-weight: 700;
+    }
+
+    .cal-weekdays>div {
+        padding: 4px 0;
+        text-align: center;
+    }
+
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+    }
+
+    .cal-cell {
+        display: block;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        min-height: 86px;
+        position: relative;
+        text-decoration: none;
+        color: var(--text);
+    }
+
+    .cal-cell:hover {
+        border-color: var(--accent);
+    }
+
+    .cal-cell.muted {
+        opacity: .45;
+    }
+
+    .cal-cell.selected {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+    }
+
+    .cal-date {
+        font-weight: 800;
+    }
+
+    .cal-count {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        /* ⬅️ move to bottom instead of top */
+        font-size: 0.75rem;
+        background: var(--pill-bg);
+        border: 1px solid var(--pill-border);
+        border-radius: 999px;
+        padding: 2px 6px;
+        line-height: 1;
+    }
+
+    .side-panel {
+        position: sticky;
+        top: 16px;
+        padding: 12px;
+        align-self: start;
+    }
+</style>

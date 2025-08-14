@@ -1,0 +1,64 @@
+@page
+@model TrainerBookingSystem.Web.Pages.ManagementModel
+@{
+    ViewData["Title"] = "Management";
+}
+
+<section class="page-header">
+    <h1>🛠️ Management</h1>
+    <p class="muted">Admin tools and stats to help you run the show.</p>
+</section>
+
+<div class="management-grid">
+
+    <!-- Summary Stats -->
+    <section class="card">
+        <h2>📊 Summary</h2>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-num">@Model.TotalClients</div>
+                <div class="stat-label">Total Clients</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">@Model.BookingsThisWeek</div>
+                <div class="stat-label">Bookings This Week</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">@Model.CancellationsThisWeek</div>
+                <div class="stat-label">Cancellations</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="card">
+        <h2>⚡ Quick Actions</h2>
+        <div class="quick-actions">
+            <a class="btn btn-accent" asp-page="/Clients/Create">＋ Add Client</a>
+            <a class="btn" asp-page="/Calendar">📅 View Calendar</a>
+            <a class="btn btn-ghost" href="#">⬇ Export Data</a>
+        </div>
+    </section>
+
+    <!-- Recent Changes -->
+    <section class="card span-2">
+        <h2>🗂️ Recent Changes</h2>
+        @if (!Model.RecentChanges.Any())
+        {
+            <p class="muted">No recent activity.</p>
+        }
+        else
+        {
+            <ul class="booking-list compact">
+                @foreach (var change in Model.RecentChanges)
+                {
+                    <li class="booking-item">
+                        <div class="b-time">@change.Date.ToString("dd MMM yyyy · HH:mm")</div>
+                        <div class="b-type">@change.Description</div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+</div>
