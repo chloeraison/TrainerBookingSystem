@@ -2,8 +2,8 @@ name: Build & Deploy .NET to Azure App Service
 
 on:
   push:
-    branches: [ main ]        # <-- change if your default branch isn't 'main'
-  workflow_dispatch:          # <-- lets you run it manually from the Actions tab
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -19,13 +19,13 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore
-        run: dotnet restore TrainerBookingSystem.Web/TrainerBookingSystem.Web.csproj
+        run: dotnet restore TrainerBookingSystem/TrainerBookingSystem.Web.csproj
 
       - name: Build
-        run: dotnet build TrainerBookingSystem.Web/TrainerBookingSystem.Web.csproj -c Release --no-restore
+        run: dotnet build TrainerBookingSystem/TrainerBookingSystem.Web.csproj -c Release --no-restore
 
       - name: Publish
-        run: dotnet publish TrainerBookingSystem.Web/TrainerBookingSystem.Web.csproj -c Release -o ${{ github.workspace }}/publish --no-build
+        run: dotnet publish TrainerBookingSystem/TrainerBookingSystem.Web.csproj -c Release -o ${{ github.workspace }}/publish --no-build
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
