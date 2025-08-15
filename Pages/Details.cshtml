@@ -9,19 +9,12 @@
     <h1>👤 @Model.Client?.Name</h1>
 
     <div class="quick-actions">
-        @* Only show WhatsApp if you add a phone later *@
         @if (!string.IsNullOrWhiteSpace(Model.Client?.Phone))
         {
             <a class="btn" href="https://wa.me/@Model.Client!.Phone" target="_blank" rel="noopener">💬 WhatsApp</a>
         }
-
-        <a class="btn btn-accent"
-           asp-page="/Bookings/Create"
-           asp-route-clientId="@Model.Client?.Id">＋ New booking</a>
-
-        <a class="btn"
-           asp-page="/Clients/Edit"
-           asp-route-id="@Model.Client?.Id">✏️ Edit</a>
+        <a class="btn btn-accent" asp-page="/Bookings/Create" asp-route-clientId="@Model.Client?.Id">＋ New booking</a>
+        <a class="btn" asp-page="/Clients/Edit" asp-route-id="@Model.Client?.Id">✏️ Edit</a>
     </div>
 </section>
 
@@ -34,14 +27,11 @@
 
             <div>🕒 Pref. time</div>
             <div>
-                @foreach (var chip in Model.PreferredTimeChips)
+                @if (Model.PreferredTimeChips.Any())
                 {
-                    <span class="chip">@chip</span>
+                    foreach (var chip in Model.PreferredTimeChips) { <span class="chip">@chip</span> }
                 }
-                @if (!Model.PreferredTimeChips.Any())
-                {
-                    <span class="muted">—</span>
-                }
+                else { <span class="muted">—</span> }
             </div>
 
             <div>📌 Notes</div>
@@ -85,8 +75,16 @@
                             @($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")
                         </div>
                         <div class="b-actions">
-                            <a class="btn btn-sm" asp-page="/Bookings/Edit" asp-route-id="@b.Id">✏️ Edit</a>
-                            <a class="btn btn-sm btn-ghost" asp-page="/Bookings/Details" asp-route-id="@b.Id">🔍 View</a>
+                            <form method="post" asp-page-handler="ViewBooking">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <input type="hidden" name="bookingId" value="@b.Id" />
+                                <button type="submit" class="btn btn-sm btn-ghost">🔍 View</button>
+                            </form>
+                            <form method="post" asp-page-handler="OpenEdit">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <input type="hidden" name="bookingId" value="@b.Id" />
+                                <button type="submit" class="btn btn-sm">✏️ Edit</button>
+                            </form>
                         </div>
                     </li>
                 }
@@ -113,7 +111,11 @@
                             @($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")
                         </div>
                         <div class="b-actions">
-                            <a class="btn btn-sm btn-ghost" asp-page="/Bookings/Details" asp-route-id="@b.Id">🔍 View</a>
+                            <form method="post" asp-page-handler="ViewBooking">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <input type="hidden" name="bookingId" value="@b.Id" />
+                                <button type="submit" class="btn btn-sm btn-ghost">🔍 View</button>
+                            </form>
                         </div>
                     </li>
                 }
@@ -121,3 +123,72 @@
         }
     </section>
 </div>
+
+<!-- ===== View modal ===== -->
+@if (Model.ShowViewModal && Model.ViewBooking != null)
+{
+    var vb = Model.ViewBooking;
+    <div class="app-modal-backdrop show">
+        <div class="app-modal" role="dialog" aria-modal="true" aria-label="Booking details">
+            <h3>Booking details</h3>
+            <p><strong>Client:</strong> @vb.Client?.Name</p>
+            <p><strong>When:</strong> @((vb.Date + vb.StartTime).ToString("ddd dd MMM · HH:mm"))</p>
+            <p><strong>Type:</strong> @vb.SessionType</p>
+            <p><strong>Duration:</strong> @(vb.Duration.TotalMinutes) mins</p>
+
+            <form method="post" asp-page-handler="CloseModals">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button class="btn">Close</button>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- ===== Edit (reschedule) modal ===== -->
+@if (Model.ShowEditModal)
+{
+    <div class="app-modal-backdrop show">
+        <div class="app-modal" role="dialog" aria-modal="true" aria-label="Reschedule booking">
+            <h3>Reschedule booking</h3>
+            <form method="post" asp-page-handler="Reschedule">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" asp-for="EditBookingId" />
+
+                <label class="block" style="margin-bottom:6px;">New date & time</label>
+                <input class="input" type="datetime-local" asp-for="NewStartLocal" />
+
+                @if (Model.Conflicts.Any())
+                {
+                    <div class="card" style="margin-top:12px;border:1px solid #b30000;background:#2b0c0c;color:#ffdede;">
+                        <div style="font-weight:800;margin-bottom:6px;">Conflicts</div>
+                        <ul style="margin:0 0 8px 18px;">
+                            @foreach (var c in Model.Conflicts) { <li>@c</li> }
+                        </ul>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-secondary" type="submit" name="override" value="false">Back</button>
+                            <button class="btn" type="submit" name="override" value="true">Override & cancel conflicts</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div style="display:flex;gap:8px;margin-top:12px;">
+                        <button class="btn" type="submit" name="override" value="false">Check & Apply</button>
+                        <button class="btn btn-secondary" type="submit"
+                                formaction="?handler=CloseModals" formmethod="post">Cancel</button>
+                    </div>
+                }
+            </form>
+        </div>
+    </div>
+}
+
+<style>
+/* hidden by default; only visible when .show is present */
+.app-modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; place-items:center; z-index:5000; }
+.app-modal-backdrop.show{ display:grid; }
+.app-modal{ background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; width:min(560px,92vw); box-shadow:0 10px 30px rgba(0,0,0,.35); }
+</style>
+
+<script src="~/js/clients-modals.js"></script>

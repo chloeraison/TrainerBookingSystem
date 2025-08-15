@@ -4,78 +4,166 @@ using Microsoft.EntityFrameworkCore;
 using TrainerBookingSystem.Web.Data;
 using TrainerBookingSystem.Web.Models;
 
-namespace TrainerBookingSystem.Web.Pages;
-
-public class DetailsModel : PageModel
+namespace TrainerBookingSystem.Web.Pages
 {
-    private readonly AppDbContext _db;
-    public DetailsModel(AppDbContext db) => _db = db;
-
-    [BindProperty(SupportsGet = true)] public int Id { get; set; }
-
-    public Client? Client { get; private set; }
-    public List<Booking> Upcoming { get; private set; } = new();
-    public List<Booking> Recent { get; private set; } = new();
-    public int WeekCount { get; private set; }
-    public int MonthCount { get; private set; }
-    public List<string> PreferredTimeChips { get; private set; } = new();
-    public string? HolidayText { get; private set; }
-
-    public async Task<IActionResult> OnGetAsync()
+    public class DetailsModel : PageModel
     {
-        Client = await _db.Clients.FindAsync(Id);
-        if (Client == null) return NotFound();
+        private readonly AppDbContext _db;
+        public DetailsModel(AppDbContext db) => _db = db;
 
-        var today = DateTime.Today;
-        var startOfWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
-        var startOfMonth = new DateTime(today.Year, today.Month, 1);
+        [BindProperty(SupportsGet = true)] public int Id { get; set; }
 
-        // 1) Upcoming — order by Date in SQL, then by StartTime in memory
-        var upcomingRaw = await _db.Bookings
-            .Include(b => b.Client)
-            .Where(b => b.ClientId == Id && b.IsConfirmed && b.Date >= today)
-            .OrderBy(b => b.Date)             // SQL can handle this
-            .Take(100)                        // small safety cap
-            .ToListAsync();
+        public Client? Client { get; private set; }
+        public List<Booking> Upcoming { get; private set; } = new();
+        public List<Booking> Recent { get; private set; } = new();
+        public int WeekCount { get; private set; }
+        public int MonthCount { get; private set; }
+        public List<string> PreferredTimeChips { get; private set; } = new();
+        public string? HolidayText { get; private set; }
 
-        Upcoming = upcomingRaw
-            .OrderBy(b => b.Date)
-            .ThenBy(b => b.StartTime)         // TimeSpan sort in memory
-            .Take(10)
-            .ToList();
+        // --- modal state / bindings used by the .cshtml ---
+        [BindProperty] public int EditBookingId { get; set; }
+        [BindProperty] public DateTime NewStartLocal { get; set; } = DateTime.Now;
+        public bool ShowEditModal { get; set; }
+        public List<string> Conflicts { get; set; } = new();
 
-        // 2) Recent — same trick, but descending
-        var recentRaw = await _db.Bookings
-            .Include(b => b.Client)
-            .Where(b => b.ClientId == Id && b.IsConfirmed && b.Date < today)
-            .OrderByDescending(b => b.Date)
-            .Take(100)
-            .ToListAsync();
+        public Booking? ViewBooking { get; set; }
+        public bool ShowViewModal { get; set; }
 
-        Recent = recentRaw
-            .OrderByDescending(b => b.Date)
-            .ThenByDescending(b => b.StartTime)  // TimeSpan sort in memory
-            .Take(10)
-            .ToList();
-
-        // 3) Counts (no TimeSpan ordering here, so fine to stay in SQL)
-        WeekCount = await _db.Bookings.CountAsync(b =>
-            b.ClientId == Id && b.IsConfirmed &&
-            b.Date >= startOfWeek && b.Date < startOfWeek.AddDays(7));
-
-        MonthCount = await _db.Bookings.CountAsync(b =>
-            b.ClientId == Id && b.IsConfirmed &&
-            b.Date >= startOfMonth && b.Date < startOfMonth.AddMonths(1));
-
-        // 4) Preferred time chips
-        if (!string.IsNullOrWhiteSpace(Client.PreferredTimes))
+        public async Task<IActionResult> OnGetAsync()
         {
-            PreferredTimeChips = Client.PreferredTimes
-                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                .ToList();
+            await LoadClientAndLists();
+            return Client == null ? NotFound() : Page();
         }
 
-        return Page();
-    }
+        public async Task<IActionResult> OnPostViewBookingAsync(int bookingId)
+        {
+            await LoadClientAndLists();
+            ViewBooking = await _db.Bookings.Include(b => b.Client)
+                                            .FirstOrDefaultAsync(b => b.Id == bookingId);
+            ShowViewModal = ViewBooking != null;
+            return Page();
+        }
 
+        public async Task<IActionResult> OnPostOpenEditAsync(int bookingId)
+        {
+            await LoadClientAndLists();
+            var b = await _db.Bookings.FirstOrDefaultAsync(x => x.Id == bookingId);
+            if (b == null) return await OnGetAsync();
+
+            EditBookingId = b.Id;
+            NewStartLocal = b.Date.Date + b.StartTime;
+            ShowEditModal = true;
+            return Page();
+        }
+
+        public async Task<IActionResult> OnPostRescheduleAsync()
+        {
+            await LoadClientAndLists();
+
+            var booking = await _db.Bookings.Include(b => b.Client)
+                                            .FirstOrDefaultAsync(b => b.Id == EditBookingId);
+            if (booking == null) return await OnGetAsync();
+
+            var targetDate  = NewStartLocal.Date;
+            var targetStart = NewStartLocal.TimeOfDay;
+            var targetEnd   = targetStart + booking.Duration;
+
+            var others = await _db.Bookings
+                .Where(b => b.IsConfirmed && b.Date == targetDate && b.Id != booking.Id)
+                .Include(b => b.Client)
+                .ToListAsync();
+
+            Conflicts.Clear();
+            var clashing = new List<Booking>();
+            foreach (var ob in others)
+            {
+                var obStart = ob.StartTime;
+                var obEnd   = ob.StartTime + ob.Duration;
+                if (targetStart < obEnd && targetEnd > obStart)
+                {
+                    clashing.Add(ob);
+                    Conflicts.Add($"{ob.Client?.Name ?? "Unknown"} @ {obStart:hh\\:mm} – {obEnd:hh\\:mm}");
+                }
+            }
+
+            var shouldOverride = Request.Form["override"]
+                .ToString()
+                .Equals("true", StringComparison.OrdinalIgnoreCase);
+
+            if (Conflicts.Any() && !shouldOverride)
+            {
+                // Keep modal open to show warnings
+                EditBookingId = booking.Id;
+                ShowEditModal = true;
+                return Page();
+            }
+
+            if (shouldOverride && clashing.Any())
+            {
+                // soft-cancel clashes
+                foreach (var cb in clashing) cb.IsConfirmed = false;
+            }
+
+            booking.Date = targetDate;
+            booking.StartTime = targetStart;
+
+            await _db.SaveChangesAsync();
+            return RedirectToPage("/Details", new { id = Id });
+        }
+
+        public async Task<IActionResult> OnPostCloseModalsAsync()
+        {
+            return await OnGetAsync();
+        }
+
+        private async Task LoadClientAndLists()
+        {
+            Client = await _db.Clients.FindAsync(Id);
+            if (Client == null) return;
+
+            var today = DateTime.Today;
+            var startOfWeek  = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
+            var startOfMonth = new DateTime(today.Year, today.Month, 1);
+
+            var upcomingRaw = await _db.Bookings
+                .Where(b => b.ClientId == Id && b.IsConfirmed && b.Date >= today)
+                .Include(b => b.Client)
+                .OrderBy(b => b.Date)
+                .Take(100)
+                .ToListAsync();
+
+            Upcoming = upcomingRaw.OrderBy(b => b.Date)
+                                  .ThenBy(b => b.StartTime)
+                                  .Take(10)
+                                  .ToList();
+
+            var recentRaw = await _db.Bookings
+                .Where(b => b.ClientId == Id && b.IsConfirmed && b.Date < today)
+                .Include(b => b.Client)
+                .OrderByDescending(b => b.Date)
+                .Take(100)
+                .ToListAsync();
+
+            Recent = recentRaw.OrderByDescending(b => b.Date)
+                              .ThenByDescending(b => b.StartTime)
+                              .Take(10)
+                              .ToList();
+
+            WeekCount = await _db.Bookings.CountAsync(b =>
+                b.ClientId == Id && b.IsConfirmed &&
+                b.Date >= startOfWeek && b.Date < startOfWeek.AddDays(7));
+
+            MonthCount = await _db.Bookings.CountAsync(b =>
+                b.ClientId == Id && b.IsConfirmed &&
+                b.Date >= startOfMonth && b.Date < startOfMonth.AddMonths(1));
+
+            if (!string.IsNullOrWhiteSpace(Client.PreferredTimes))
+            {
+                PreferredTimeChips = Client.PreferredTimes
+                    .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                    .ToList();
+            }
+        }
+    }
 }

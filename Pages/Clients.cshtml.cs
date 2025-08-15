@@ -1,32 +1,23 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using TrainerBookingSystem.Web.Data;
 using TrainerBookingSystem.Web.Models;
 
-
-public class ClientsModel : PageModel
+namespace TrainerBookingSystem.Web.Pages
 {
-    public List<Client> Clients { get; set; }
-
-    public void OnGet()
+    public class ClientsModel : PageModel
     {
-        // Dummy data for testing
-        Clients = new List<Client>
+        private readonly AppDbContext _db;
+        public ClientsModel(AppDbContext db) => _db = db;
+
+        public List<Client> Clients { get; set; } = new();
+
+        public async Task OnGetAsync()
         {
-            new Client
-            {
-                Id = 1,
-                Name = "Ash Ketchum",
-                Gym = "Gym A",
-                PreferredTimes = "Morning",
-                Flags = "🚫 Injured shoulder"
-            },
-            new Client
-            {
-                Id = 2,
-                Name = "Tony Stark",
-                Gym = "Iron Gym",
-                PreferredTimes = "Evening",
-                Flags = "⚠️ Might reschedule often"
-            }
-        };
+            // Load real clients from DB; trim columns for table
+            Clients = await _db.Clients
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+        }
     }
 }

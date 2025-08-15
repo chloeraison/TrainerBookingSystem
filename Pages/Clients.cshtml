@@ -16,22 +16,23 @@
                     <th>Name</th>
                     <th>🏋️ Gym</th>
                     <th>🕒 Pref. Time</th>
-                    <th></th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var client in Model.Clients)
-                {
-                    <tr>
-                        <td>@client.Name</td>
-                        <td>@client.Gym</td>
-                        <td>@client.PreferredTimes</td>
-                        <td>
-                            <a class="btn btn-sm" asp-page="/Details" asp-route-id="@client.Id">🔍 View</a>
-                        </td>
-                    </tr>
-                }
+            @foreach (var c in Model.Clients)
+            {
+                <tr>
+                    <td>
+                        <a class="link" asp-page="/Details" asp-route-id="@c.Id">
+                            @c.Name
+                        </a>
+                    </td>
+                    <td>@c.Gym</td>
+                    <td>@c.PreferredTimes</td>
+                </tr>
+            }
             </tbody>
         </table>
     </div>
 </section>
+

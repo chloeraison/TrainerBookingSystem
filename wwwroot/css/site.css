@@ -474,3 +474,10 @@ main {
 @media (max-width: 820px) {
     .management-grid { grid-template-columns: 1fr; }
 }
+
+.modal-backdrop {
+    display: none;
+}
+.modal-backdrop.show {
+    display: grid;
+}
