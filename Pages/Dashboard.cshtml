@@ -19,14 +19,14 @@
 
     <div style="display:flex;gap:18px;align-items:center;margin-bottom:10px;">
         <a class="btn" asp-page="/Dashboard" asp-route-year="@prevY" asp-route-month="@prevM"
-            asp-route-selected="@Model.selected">
+           asp-route-selected="@Model.selected">
             ← @prevLabel
         </a>
 
         <div style="font-weight:800;font-size:22px;">@header</div>
 
         <a class="btn" asp-page="/Dashboard" asp-route-year="@nextY" asp-route-month="@nextM"
-            asp-route-selected="@Model.selected">
+           asp-route-selected="@Model.selected">
             @nextLabel →
         </a>
     </div>
@@ -43,109 +43,128 @@
                 <div>Sat</div>
                 <div>Sun</div>
             </div>
-    </div>
 
-    <div class="cal-grid">
-        @foreach (var cell in Model.MonthCells)
-        {
-            var isSelected = Model.SelectedDates.Contains(cell.Date.Date);
-            var toggle = Model.ToggleSelection(cell.Date);
-
-            <a class="cal-cell @(cell.InCurrentMonth ? "" : "muted") @(isSelected ? "selected" : "")" asp-page="/Dashboard"
-                asp-route-year="@Model.VisibleYear" asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle"
-                title="@cell.Date.ToString("dddd dd MMM")">
-
-                <div class="cal-date">@cell.Date.Day</div>
-
-                @if (cell.BookingCount > 0)
+            <div class="cal-grid">
+                @foreach (var cell in Model.MonthCells)
                 {
-                    <div class="cal-count">@cell.BookingCount</div>
-                }
-            </a>
-        }
-    </div>
+                    var isSelected = Model.SelectedDates.Contains(cell.Date.Date);
+                    var toggle = Model.ToggleSelection(cell.Date);
 
-    <p style="color:var(--muted);margin-top:8px;">
-        Tip: click multiple days to compare on the right.
-    </p>
-    </section>
+                    <a class="cal-cell @(cell.InCurrentMonth ? "" : "muted") @(isSelected ? "selected" : "")" asp-page="/Dashboard"
+                       asp-route-year="@Model.VisibleYear" asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle"
+                       title="@cell.Date.ToString("dddd dd MMM")">
 
-    <!-- RIGHT: Selected days panel -->
-    <aside class="card side-panel">
-        <h3 style="margin-top:0;">Selected days</h3>
+                        <div class="cal-date">@cell.Date.Day</div>
 
-        @if (Model.SelectedDates.Count == 0)
-        {
-            <p style="color:var(--muted);">No days selected. Click days in the calendar to compare.</p>
-        }
-        else
-        {
-            <!-- chips for each selected day + Clear all -->
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-                @foreach (var d in Model.SelectedDates.OrderBy(d => d))
-                {
-                    var toggle = Model.ToggleSelection(d);
-                    <a class="badge" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
-                        asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle" title="Unselect">
-                        @d.ToString("ddd dd MMM") ✕
+                        @if (cell.BookingCount > 0)
+                        {
+                            <div class="cal-count">@cell.BookingCount</div>
+                        }
                     </a>
                 }
-
-                <!-- Clear all -->
-                <a class="badge" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
-                    asp-route-month="@Model.VisibleMonth" asp-route-selected="">
-                    Clear all
-                </a>
             </div>
 
-            <!-- day cards -->
-            @foreach (var card in Model.SelectedDayCards)
+            <p style="color:var(--muted);margin-top:8px;">
+                Tip: click multiple days to compare on the right.
+            </p>
+        </section>
+
+        <!-- RIGHT: Selected days panel -->
+        <aside class="card side-panel">
+            <h3 style="margin-top:0;">Selected days</h3>
+
+            @if (Model.SelectedDates.Count == 0)
             {
-                var toggle = Model.ToggleSelection(card.Date);
-
-                <div class="card" style="padding:10px;margin-bottom:12px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <div style="font-weight:800;">@card.Date.ToString("dddd dd MMM")</div>
-
-                        <div style="display:flex;gap:6px;">
-                            <!-- unselect this day -->
-                            <a class="btn" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
-                                asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle">
-                                Unselect
-                            </a>
-
-                            <!-- quick add booking for this day (prefill date) -->
-                            <a class="btn" asp-page="/Bookings/Create" asp-route-date="@card.Date.ToString("yyyy-MM-dd")">
-                                + Add
-                            </a>
-                        </div>
-                    </div>
-
-                    @if (!card.Bookings.Any())
-                    {
-                        <div style="color:var(--muted);">No bookings yet.</div>
-                    }
-                    else
-                    {
-                        <div style="display:flex;flex-direction:column;gap:6px;">
-                            @foreach (var b in card.Bookings.OrderBy(b => b.StartTime))
-                            {
-                                <div class="card" style="padding:8px;">
-                                    <div style="font-weight:700;">
-                                        @b.StartTime.ToString(@"hh\:mm") · @b.Client?.Name
-                                    </div>
-                                    <div style="color:var(--muted);">
-                                        @b.SessionType (@(b.Duration.TotalMinutes) mins)
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
+                <p style="color:var(--muted);">No days selected. Click days in the calendar to compare.</p>
             }
-        }
-    </aside>
+            else
+            {
+                <!-- chips for each selected day + Clear all -->
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+                    @foreach (var d in Model.SelectedDates.OrderBy(d => d))
+                    {
+                        var toggle = Model.ToggleSelection(d);
+                        <a class="badge" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
+                           asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle" title="Unselect">
+                            @d.ToString("ddd dd MMM") ✕
+                        </a>
+                    }
+
+                    <!-- Clear all -->
+                    <a class="badge" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
+                       asp-route-month="@Model.VisibleMonth" asp-route-selected="">
+                        Clear all
+                    </a>
+                </div>
+
+                <!-- day cards -->
+                @foreach (var card in Model.SelectedDayCards)
+                {
+                    var toggle = Model.ToggleSelection(card.Date);
+                    var dateIso = card.Date.ToString("yyyy-MM-dd");
+
+                    <div class="card day-card" data-date="@dateIso" style="padding:10px;margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <div style="font-weight:800;">@card.Date.ToString("dddd dd MMM")</div>
+
+                            <div style="display:flex;gap:6px;align-items:center;">
+                                <span class="muted" id="selcount-@dateIso" style="font-size:.9rem;"></span>
+
+                                <!-- Cancel (confirm) — acts on selected, else all on this day -->
+                                <button type="button" class="btn" onclick="handleCancel('@dateIso', '@Model.VisibleYear', '@Model.VisibleMonth', '@Model.selected')">
+                                    Cancel
+                                </button>
+
+                                <!-- Amend — acts on selected; if none, warns that it applies to all -->
+                                <button type="button" class="btn" onclick="handleAmend('@dateIso')">
+                                    Amend
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (!card.Bookings.Any())
+                        {
+                            <div style="color:var(--muted);">No bookings yet.</div>
+                        }
+                        else
+                        {
+                            <div class="booking-list" style="display:flex;flex-direction:column;gap:6px;">
+                                @foreach (var b in card.Bookings.OrderBy(b => b.StartTime))
+                                {
+                                    <div class="card booking selectable"
+                                         data-booking-id="@b.Id"
+                                         onclick="toggleBooking(this, '@dateIso')"
+                                         style="padding:8px;cursor:pointer;">
+                                        <div style="font-weight:700;">
+                                            @b.StartTime.ToString(@"hh\:mm") ·
+                                            <!-- details page is /Clients/Details, change asp-page to "/Clients/Details" -->
+                                            <a class="link" asp-page="/Details" asp-route-id="@b.ClientId" onclick="event.stopPropagation();">
+                                                @(b.Client?.Name ?? "Unknown client")
+                                            </a>
+                                        </div>
+                                        <div style="color:var(--muted);">
+                                            @b.SessionType (@(b.Duration.TotalMinutes) mins)
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </aside>
+    </div>
 </div>
+
+<!-- Hidden form reused for bulk actions -->
+<form id="bulkActionForm" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="date" />
+    <input type="hidden" name="bookingIdsCsv" />
+    <input type="hidden" name="returnYear" value="@Model.VisibleYear" />
+    <input type="hidden" name="returnMonth" value="@Model.VisibleMonth" />
+    <input type="hidden" name="returnSelected" value="@Model.selected" />
+</form>
 
 <style>
     .cal-weekdays {
@@ -156,18 +175,13 @@
         color: var(--muted);
         font-weight: 700;
     }
-
-    .cal-weekdays>div {
-        padding: 4px 0;
-        text-align: center;
-    }
+    .cal-weekdays>div { padding: 4px 0; text-align: center; }
 
     .cal-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         gap: 10px;
     }
-
     .cal-cell {
         display: block;
         background: var(--card);
@@ -179,29 +193,14 @@
         text-decoration: none;
         color: var(--text);
     }
-
-    .cal-cell:hover {
-        border-color: var(--accent);
-    }
-
-    .cal-cell.muted {
-        opacity: .45;
-    }
-
-    .cal-cell.selected {
-        outline: 2px solid var(--accent);
-        outline-offset: 1px;
-    }
-
-    .cal-date {
-        font-weight: 800;
-    }
-
+    .cal-cell:hover { border-color: var(--accent); }
+    .cal-cell.muted { opacity: .45; }
+    .cal-cell.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .cal-date { font-weight: 800; }
     .cal-count {
         position: absolute;
         right: 8px;
         bottom: 8px;
-        /* ⬅️ move to bottom instead of top */
         font-size: 0.75rem;
         background: var(--pill-bg);
         border: 1px solid var(--pill-border);
@@ -210,10 +209,74 @@
         line-height: 1;
     }
 
-    .side-panel {
-        position: sticky;
-        top: 16px;
-        padding: 12px;
-        align-self: start;
-    }
+    .side-panel { position: sticky; top: 16px; padding: 12px; align-self: start; }
+
+    .booking.selectable { border:1px solid var(--border); }
+    .booking.selectable.selected { outline:2px solid var(--accent); outline-offset:0; }
+    .muted { color: var(--muted); }
 </style>
+
+<script>
+(function () {
+  // Toggle visual selection on a booking card
+  function toggleBooking(el, dateIso) {
+    el.classList.toggle('selected');
+    updateSelectedCount(dateIso);
+  }
+
+  // Update the "n selected" label in the day header
+  function updateSelectedCount(dateIso) {
+    const day = document.querySelector(`.day-card[data-date="${dateIso}"]`);
+    if (!day) return;
+    const count = day.querySelectorAll('.booking.selectable.selected').length;
+    const label = document.getElementById(`selcount-${dateIso}`);
+    if (label) label.textContent = count > 0 ? `${count} selected` : '';
+  }
+
+  // Collect selected booking ids for a given day
+  function getSelectedIdsForDate(dateIso) {
+    const day = document.querySelector(`.day-card[data-date="${dateIso}"]`);
+    if (!day) return [];
+    return Array.from(day.querySelectorAll('.booking.selectable.selected'))
+                .map(b => b.getAttribute('data-booking-id'));
+  }
+
+  // Submit hidden POST form to the page handler, carrying calendar context
+  function submitBulk(actionHandler, dateIso, ids) {
+    const form = document.getElementById('bulkActionForm');
+    const y   = form.querySelector('input[name="returnYear"]').value;
+    const m   = form.querySelector('input[name="returnMonth"]').value;
+    const sel = form.querySelector('input[name="returnSelected"]').value || "";
+
+    form.setAttribute('action', `?handler=${actionHandler}&year=${y}&month=${m}&selected=${encodeURIComponent(sel)}`);
+    form.querySelector('input[name="date"]').value = dateIso;
+    form.querySelector('input[name="bookingIdsCsv"]').value = (ids || []).join(',');
+    form.submit();
+  }
+
+  // Public handlers used by the buttons
+  function handleCancel(dateIso) {
+    const ids = getSelectedIdsForDate(dateIso);
+    if (ids.length === 0) {
+      if (!confirm('No bookings selected. This will cancel ALL bookings on this day. Continue?')) return;
+    } else {
+      if (!confirm(`Cancel ${ids.length} selected booking(s) on ${dateIso}?`)) return;
+    }
+    submitBulk('CancelBookings', dateIso, ids);
+  }
+
+  function handleAmend(dateIso) {
+    const ids = getSelectedIdsForDate(dateIso);
+    if (ids.length === 0) {
+      if (!confirm('No bookings selected. This amendment will apply to ALL bookings on this day. Continue?')) return;
+    }
+    submitBulk('AmendBookings', dateIso, ids);
+  }
+
+  // expose to inline onclick
+  window.toggleBooking = toggleBooking;
+  window.handleCancel  = handleCancel;
+  window.handleAmend   = handleAmend;
+})();
+</script>
+

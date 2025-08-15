@@ -1,0 +1,57 @@
+@page
+@model TrainerBookingSystem.Web.Pages.Bookings.BulkAmendModel
+@{
+    ViewData["Title"] = "Bulk Amend Bookings";
+}
+
+<h2>Bulk Amend</h2>
+
+<form method="post" class="card" style="padding:12px;max-width:620px;">
+    @Html.AntiForgeryToken()
+
+    <input type="hidden" asp-for="IdsCsv" />
+    <input type="hidden" asp-for="OverrideConflicts" />
+    <!-- carry calendar view back to dashboard -->
+    <input type="hidden" name="returnYear" value="@Request.Query["year"]" />
+    <input type="hidden" name="returnMonth" value="@Request.Query["month"]" />
+    <input type="hidden" name="returnSelected" value="@Request.Query["selected"]" />
+
+    <p style="margin-top:0;">
+        You’re amending <strong>@Model.Count</strong> booking(s).
+    </p>
+
+    <label class="block" style="margin-bottom:6px;">New start date &amp; time</label>
+    <input type="datetime-local" asp-for="NewStartLocal" class="input" />
+
+    <div style="color:var(--muted);font-size:.9rem;margin-top:6px;">
+        Sets the <em>date</em> and <em>start time</em> for the selected bookings. Duration/session type stays the same.
+    </div>
+
+    @if (Model.Conflicts.Any())
+    {
+        <div class="card" style="margin-top:14px;border:1px solid #b30000;background:#2b0c0c;color:#ffdede;">
+            <div style="font-weight:800;margin-bottom:6px;">Conflicts detected</div>
+            <ul style="margin:0 0 8px 18px;">
+                @foreach (var c in Model.Conflicts)
+                {
+                    <li>@c</li>
+                }
+            </ul>
+            <div style="display:flex;gap:8px;">
+                <button type="submit" class="btn btn-secondary" name="override" value="false">Back (change time)</button>
+                <button type="submit" class="btn" name="override" value="true">Override &amp; cancel conflicts</button>
+            </div>
+        </div>
+    }
+
+    @if (!Model.Conflicts.Any())
+    {
+        <div style="display:flex;gap:8px;margin-top:12px;">
+            <button type="submit" class="btn" name="override" value="false">Check &amp; Apply</button>
+            <a class="btn btn-secondary" asp-page="/Dashboard"
+               asp-route-year="@Request.Query["year"]"
+               asp-route-month="@Request.Query["month"]"
+               asp-route-selected="@Request.Query["selected"]">Cancel</a>
+        </div>
+    }
+</form>
