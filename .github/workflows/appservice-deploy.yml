@@ -19,17 +19,17 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore
-        run: dotnet restore TrainerBookingSystem/TrainerBookingSystem.Web.csproj
+        run: dotnet restore TrainerBookingSystem.Web.csproj
 
       - name: Build
-        run: dotnet build TrainerBookingSystem/TrainerBookingSystem.Web.csproj -c Release --no-restore
+        run: dotnet build TrainerBookingSystem.Web.csproj -c Release --no-restore
 
       - name: Publish
-        run: dotnet publish TrainerBookingSystem/TrainerBookingSystem.Web.csproj -c Release -o ${{ github.workspace }}/publish --no-build
+        run: dotnet publish TrainerBookingSystem.Web.csproj -c Release -o ${{ github.workspace }}/publish --no-build
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: TibblesBookingSystem                         # EXACT App Service name
+          app-name: TibblesBookingSystem
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
           package: ${{ github.workspace }}/publish
