@@ -7,6 +7,7 @@ namespace TrainerBookingSystem.Web.Pages
     {
         public IActionResult OnGet()
         {
+            // Redirect straight to Dashboard
             return RedirectToPage("/Dashboard");
         }
     }
