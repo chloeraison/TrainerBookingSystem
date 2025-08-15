@@ -1,0 +1,35 @@
+name: Build & Deploy .NET to Azure App Service
+
+on:
+  push:
+    branches: [ main ]        # <-- change if your default branch isn't 'main'
+  workflow_dispatch:          # <-- lets you run it manually from the Actions tab
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore TrainerBookingSystem.Web/TrainerBookingSystem.Web.csproj
+
+      - name: Build
+        run: dotnet build TrainerBookingSystem.Web/TrainerBookingSystem.Web.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish TrainerBookingSystem.Web/TrainerBookingSystem.Web.csproj -c Release -o ${{ github.workspace }}/publish --no-build
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: TibblesBookingSystem                         # EXACT App Service name
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+          package: ${{ github.workspace }}/publish
