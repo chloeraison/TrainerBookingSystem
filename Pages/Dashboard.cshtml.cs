@@ -12,6 +12,11 @@ namespace TrainerBookingSystem.Web.Pages
         private readonly AppDbContext _db;
         public DashboardModel(AppDbContext db) => _db = db;
 
+        // ====== Working window for the timeline (adjust later in settings) ======
+        private static readonly TimeSpan WorkingStart = new(6, 0, 0);  // 06:00
+        private static readonly TimeSpan WorkingEnd   = new(22, 0, 0); // 22:00
+        public double WindowMinutes => (WorkingEnd - WorkingStart).TotalMinutes;
+
         // ====== Querystring / state ======
         [BindProperty(SupportsGet = true)] public int? year { get; set; }
         [BindProperty(SupportsGet = true)] public int? month { get; set; }
@@ -98,21 +103,27 @@ namespace TrainerBookingSystem.Web.Pages
                     .ToList();
             }
 
-            // build cards
+            // build cards + compute gaps timeline for each selected day
             SelectedDayCards = SelectedDates
                 .OrderBy(d => d)
-                .Select(d => new DayCard
+                .Select(d =>
                 {
-                    Date = d,
-                    Bookings = SelectedBookings
+                    var dayBookings = SelectedBookings
                         .Where(b => b.Date.Date == d.Date)
                         .OrderBy(b => b.StartTime)
-                        .ToList()
+                        .ToList();
+
+                    return new DayCard
+                    {
+                        Date = d,
+                        Bookings = dayBookings,
+                        Gaps = ComputeGaps(dayBookings)
+                    };
                 })
                 .ToList();
         }
 
-        // ====== POST handlers called from Dashboard.cshtml JS ======
+        // ====== POST handlers (existing) ======
 
         // Cancels selected bookings; if none selected, cancels all on that day
         public async Task<IActionResult> OnPostCancelBookingsAsync(string date, string? bookingIdsCsv, int? returnYear, int? returnMonth, string? returnSelected)
@@ -137,7 +148,6 @@ namespace TrainerBookingSystem.Web.Pages
                 selected = returnSelected ?? selected
             });
         }
-
 
         public async Task<IActionResult> OnPostAmendBookingsAsync(string date, string? bookingIdsCsv, int? returnYear, int? returnMonth, string? returnSelected)
         {
@@ -184,6 +194,42 @@ namespace TrainerBookingSystem.Web.Pages
                       .ToList();
         }
 
+        // Compute gaps between bookings within [WorkingStart, WorkingEnd]
+        private List<GapSlot> ComputeGaps(List<Booking> dayBookings)
+        {
+            var gaps = new List<GapSlot>();
+            if (WindowMinutes <= 0) return gaps;
+
+            // Build a list of occupied segments clamped to the working window
+            var occ = dayBookings
+                .Select(b =>
+                {
+                    var s = b.StartTime;
+                    var e = b.StartTime + b.Duration;
+                    var clampedStart = s < WorkingStart ? WorkingStart : s;
+                    var clampedEnd   = e > WorkingEnd   ? WorkingEnd   : e;
+                    return new { Start = clampedStart, End = clampedEnd };
+                })
+                .Where(x => x.End > x.Start) // keep only positive-length
+                .OrderBy(x => x.Start)
+                .ToList();
+
+            // Walk from start to end and add gaps
+            var cursor = WorkingStart;
+            foreach (var seg in occ)
+            {
+                if (seg.Start > cursor)
+                    gaps.Add(new GapSlot { Start = cursor, End = seg.Start });
+
+                cursor = seg.End > cursor ? seg.End : cursor;
+            }
+
+            if (cursor < WorkingEnd)
+                gaps.Add(new GapSlot { Start = cursor, End = WorkingEnd });
+
+            return gaps;
+        }
+
         // ====== view models ======
         public class MonthDayCell
         {
@@ -196,6 +242,14 @@ namespace TrainerBookingSystem.Web.Pages
         {
             public DateTime Date { get; set; }
             public List<Booking> Bookings { get; set; } = new();
+            public List<GapSlot> Gaps { get; set; } = new();
+        }
+
+        public class GapSlot
+        {
+            public TimeSpan Start { get; set; }
+            public TimeSpan End { get; set; }
+            public double Minutes => (End - Start).TotalMinutes;
         }
 
         // Helper to build a new CSV after toggling one day
