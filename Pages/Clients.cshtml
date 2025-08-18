@@ -1,5 +1,5 @@
-@page
-@model ClientsModel
+@page "/Clients"
+@model TrainerBookingSystem.Web.Pages.ClientsModel
 @{
     ViewData["Title"] = "Clients";
 }
@@ -16,6 +16,8 @@
                     <th>Name</th>
                     <th>🏋️ Gym</th>
                     <th>🕒 Pref. Time</th>
+                    <th style="text-align:right;">Sessions</th>
+                    <th style="text-align:right;">Completed</th>
                 </tr>
             </thead>
             <tbody>
@@ -29,10 +31,11 @@
                     </td>
                     <td>@c.Gym</td>
                     <td>@c.PreferredTimes</td>
+                    <td style="text-align:right; font-weight:700;">@c.SessionsLeft</td>
+                    <td style="text-align:right;">@c.SessionsCompleted</td>
                 </tr>
             }
             </tbody>
         </table>
     </div>
 </section>
-

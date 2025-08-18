@@ -18,6 +18,74 @@
     </div>
 </section>
 
+<!-- === Overview FIRST === -->
+<section class="card">
+    <h2>🧾 Overview</h2>
+    <div class="kv">
+        <div>🏋️ Gym</div>
+        <div>@(Model.Client?.Gym ?? "—")</div>
+
+        <div>🕒 Pref. time</div>
+        <div>
+            @if (Model.PreferredTimeChips.Any())
+            {
+                foreach (var chip in Model.PreferredTimeChips) { <span class="chip">@chip</span> }
+            }
+            else { <span class="muted">—</span> }
+        </div>
+
+        <div>📌 Notes</div>
+        <div>@(string.IsNullOrWhiteSpace(Model.Client?.Flags) ? "—" : Model.Client!.Flags)</div>
+
+        <div>🌴 Holiday</div>
+        <div>@(Model.HolidayText ?? "—")</div>
+    </div>
+</section>
+
+
+<section class="card">
+    <h2>🎯 Sessions</h2>
+
+    <div class="session-boxes">
+        <!-- Left -->
+        <form method="post" asp-page-handler="AdjustCounter" class="counter-box">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="target" value="left" />
+
+            <button class="btn-circle btn-circle-left" name="delta" value="-1" aria-label="decrease left">−</button>
+            <div class="counter-title">Left</div>
+            <div class="counter-value">@Model.Client!.SessionsLeft</div>
+            <button class="btn-circle btn-circle-right" name="delta" value="+1" aria-label="increase left">+</button>
+        </form>
+
+        <!-- Completed -->
+        <form method="post" asp-page-handler="AdjustCounter" class="counter-box">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="target" value="completed" />
+
+            <button class="btn-circle btn-circle-left" name="delta" value="-1" aria-label="decrease completed">−</button>
+            <div class="counter-title">Completed</div>
+            <div class="counter-value">@Model.Client!.SessionsCompleted</div>
+            <button class="btn-circle btn-circle-right" name="delta" value="+1" aria-label="increase completed">+</button>
+        </form>
+    </div>
+
+    <!-- week / month totals under the counters -->
+    <div class="session-totals">
+        <div class="stat">
+            <div class="stat-num">@Model.WeekCount</div>
+            <div class="stat-label">Sessions this week</div>
+        </div>
+        <div class="stat">
+            <div class="stat-num">@Model.MonthCount</div>
+            <div class="stat-label">Sessions this month</div>
+        </div>
+    </div>
+</section>
+
+
 <div class="client-details-grid">
     <section class="card">
         <h2>🧾 Overview</h2>
@@ -42,20 +110,6 @@
         </div>
     </section>
 
-    <section class="card">
-        <h2>📊 This week / month</h2>
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-num">@Model.WeekCount</div>
-                <div class="stat-label">Sessions this week</div>
-            </div>
-            <div class="stat">
-                <div class="stat-num">@Model.MonthCount</div>
-                <div class="stat-label">Sessions this month</div>
-            </div>
-        </div>
-    </section>
-
     <section class="card span-2">
         <h2>📅 Upcoming</h2>
         @if (!Model.Upcoming.Any())
@@ -75,15 +129,28 @@
                             @($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")
                         </div>
                         <div class="b-actions">
+                            <!-- View modal -->
                             <form method="post" asp-page-handler="ViewBooking">
+                                @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@Model.Id" />
                                 <input type="hidden" name="bookingId" value="@b.Id" />
                                 <button type="submit" class="btn btn-sm btn-ghost">🔍 View</button>
                             </form>
+
+                            <!-- Reschedule (opens edit modal) -->
                             <form method="post" asp-page-handler="OpenEdit">
+                                @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@Model.Id" />
                                 <input type="hidden" name="bookingId" value="@b.Id" />
                                 <button type="submit" class="btn btn-sm">✏️ Edit</button>
+                            </form>
+
+                            <!-- Mark completed -->
+                            <form method="post" asp-page-handler="MarkCompleted">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <input type="hidden" name="bookingId" value="@b.Id" />
+                                <button type="submit" class="btn btn-sm btn-ghost">✅ Completed</button>
                             </form>
                         </div>
                     </li>
@@ -112,6 +179,7 @@
                         </div>
                         <div class="b-actions">
                             <form method="post" asp-page-handler="ViewBooking">
+                                @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@Model.Id" />
                                 <input type="hidden" name="bookingId" value="@b.Id" />
                                 <button type="submit" class="btn btn-sm btn-ghost">🔍 View</button>
@@ -137,6 +205,7 @@
             <p><strong>Duration:</strong> @(vb.Duration.TotalMinutes) mins</p>
 
             <form method="post" asp-page-handler="CloseModals">
+                @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.Id" />
                 <button class="btn">Close</button>
             </form>
@@ -175,20 +244,12 @@
                 {
                     <div style="display:flex;gap:8px;margin-top:12px;">
                         <button class="btn" type="submit" name="override" value="false">Check & Apply</button>
-                        <button class="btn btn-secondary" type="submit"
-                                formaction="?handler=CloseModals" formmethod="post">Cancel</button>
+                        <button class="btn btn-secondary" type="submit" formaction="?handler=CloseModals" formmethod="post">Cancel</button>
                     </div>
                 }
             </form>
         </div>
     </div>
 }
-
-<style>
-/* hidden by default; only visible when .show is present */
-.app-modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; place-items:center; z-index:5000; }
-.app-modal-backdrop.show{ display:grid; }
-.app-modal{ background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; width:min(560px,92vw); box-shadow:0 10px 30px rgba(0,0,0,.35); }
-</style>
 
 <script src="~/js/clients-modals.js"></script>

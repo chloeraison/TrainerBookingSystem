@@ -15,25 +15,36 @@ namespace TrainerBookingSystem.Web.Pages
 
         public Client? Client { get; private set; }
         public List<Booking> Upcoming { get; private set; } = new();
-        public List<Booking> Recent { get; private set; } = new();
-        public int WeekCount { get; private set; }
+        public List<Booking> Recent   { get; private set; } = new();
+        public int WeekCount  { get; private set; }
         public int MonthCount { get; private set; }
         public List<string> PreferredTimeChips { get; private set; } = new();
         public string? HolidayText { get; private set; }
 
-        // --- modal state / bindings used by the .cshtml ---
-        [BindProperty] public int EditBookingId { get; set; }
+        [BindProperty] public int      EditBookingId { get; set; }
         [BindProperty] public DateTime NewStartLocal { get; set; } = DateTime.Now;
         public bool ShowEditModal { get; set; }
-        public List<string> Conflicts { get; set; } = new();
-
-        public Booking? ViewBooking { get; set; }
         public bool ShowViewModal { get; set; }
+        public List<string> Conflicts { get; set; } = new();
+        public Booking? ViewBooking { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
             await LoadClientAndLists();
-            return Client == null ? NotFound() : Page();
+            return Client is null ? NotFound() : Page();
+        }
+
+        public async Task<IActionResult> OnPostMarkCompletedAsync(int bookingId)
+        {
+            var booking = await _db.Bookings
+                .FirstOrDefaultAsync(b => b.Id == bookingId && b.ClientId == Id);
+            if (booking is null) return NotFound();
+
+            booking.IsConfirmed = false; // soft-complete
+            // TODO: increment SessionsCompleted / decrement SessionsLeft when those fields exist on Client
+
+            await _db.SaveChangesAsync();
+            return RedirectToPage(new { id = Id });
         }
 
         public async Task<IActionResult> OnPostViewBookingAsync(int bookingId)
@@ -48,8 +59,9 @@ namespace TrainerBookingSystem.Web.Pages
         public async Task<IActionResult> OnPostOpenEditAsync(int bookingId)
         {
             await LoadClientAndLists();
+
             var b = await _db.Bookings.FirstOrDefaultAsync(x => x.Id == bookingId);
-            if (b == null) return await OnGetAsync();
+            if (b is null) return await OnGetAsync();
 
             EditBookingId = b.Id;
             NewStartLocal = b.Date.Date + b.StartTime;
@@ -63,7 +75,7 @@ namespace TrainerBookingSystem.Web.Pages
 
             var booking = await _db.Bookings.Include(b => b.Client)
                                             .FirstOrDefaultAsync(b => b.Id == EditBookingId);
-            if (booking == null) return await OnGetAsync();
+            if (booking is null) return await OnGetAsync();
 
             var targetDate  = NewStartLocal.Date;
             var targetStart = NewStartLocal.TimeOfDay;
@@ -93,7 +105,6 @@ namespace TrainerBookingSystem.Web.Pages
 
             if (Conflicts.Any() && !shouldOverride)
             {
-                // Keep modal open to show warnings
                 EditBookingId = booking.Id;
                 ShowEditModal = true;
                 return Page();
@@ -101,11 +112,10 @@ namespace TrainerBookingSystem.Web.Pages
 
             if (shouldOverride && clashing.Any())
             {
-                // soft-cancel clashes
-                foreach (var cb in clashing) cb.IsConfirmed = false;
+                foreach (var cb in clashing) cb.IsConfirmed = false; // soft-cancel clashes
             }
 
-            booking.Date = targetDate;
+            booking.Date      = targetDate;
             booking.StartTime = targetStart;
 
             await _db.SaveChangesAsync();
@@ -120,9 +130,9 @@ namespace TrainerBookingSystem.Web.Pages
         private async Task LoadClientAndLists()
         {
             Client = await _db.Clients.FindAsync(Id);
-            if (Client == null) return;
+            if (Client is null) return;
 
-            var today = DateTime.Today;
+            var today        = DateTime.Today;
             var startOfWeek  = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
             var startOfMonth = new DateTime(today.Year, today.Month, 1);
 
@@ -133,10 +143,11 @@ namespace TrainerBookingSystem.Web.Pages
                 .Take(100)
                 .ToListAsync();
 
-            Upcoming = upcomingRaw.OrderBy(b => b.Date)
-                                  .ThenBy(b => b.StartTime)
-                                  .Take(10)
-                                  .ToList();
+            Upcoming = upcomingRaw
+                .OrderBy(b => b.Date)
+                .ThenBy(b => b.StartTime)
+                .Take(10)
+                .ToList();
 
             var recentRaw = await _db.Bookings
                 .Where(b => b.ClientId == Id && b.IsConfirmed && b.Date < today)
@@ -145,10 +156,11 @@ namespace TrainerBookingSystem.Web.Pages
                 .Take(100)
                 .ToListAsync();
 
-            Recent = recentRaw.OrderByDescending(b => b.Date)
-                              .ThenByDescending(b => b.StartTime)
-                              .Take(10)
-                              .ToList();
+            Recent = recentRaw
+                .OrderByDescending(b => b.Date)
+                .ThenByDescending(b => b.StartTime)
+                .Take(10)
+                .ToList();
 
             WeekCount = await _db.Bookings.CountAsync(b =>
                 b.ClientId == Id && b.IsConfirmed &&

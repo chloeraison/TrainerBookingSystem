@@ -3,22 +3,26 @@ using TrainerBookingSystem.Web.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorPages();
+// Build an absolute path to the DB so all contexts use the same file
+var dbPath = Path.Combine(builder.Environment.ContentRootPath, "trainerbooking.db");
 
-// Register EF Core + SQLite
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=trainerbooking.db"));
-    
-using (var scope = builder.Services.BuildServiceProvider().CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    DummyData.Seed(context);
-}
+builder.Services.AddRazorPages();
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite($"Data Source={dbPath}")
+);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Seed once, after the app is built, using the app's ServiceProvider
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // Optional for dev reset:
+    // db.Database.EnsureDeleted();
+    db.Database.EnsureCreated();
+    DummyData.Seed(db);
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -26,16 +30,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // <-- Needed to serve CSS/JS/static files
+app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
-
-app.MapRazorPages(); // This loads Pages/*.cshtml
-
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    DummyData.Seed(context);
-}
+app.MapRazorPages();
 
 app.Run();
