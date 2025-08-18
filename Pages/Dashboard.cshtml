@@ -9,7 +9,7 @@
     int nextY = (Model.VisibleMonth == 12) ? Model.VisibleYear + 1 : Model.VisibleYear;
     int nextM = (Model.VisibleMonth == 12) ? 1 : Model.VisibleMonth + 1;
 
-    string header = new DateTime(Model.VisibleYear, Model.VisibleMonth, 1).ToString("MMMM yyyy");
+    string header    = new DateTime(Model.VisibleYear, Model.VisibleMonth, 1).ToString("MMMM yyyy");
     string prevLabel = new DateTime(prevY, prevM, 1).ToString("MMM yyyy");
     string nextLabel = new DateTime(nextY, nextM, 1).ToString("MMM yyyy");
 }
@@ -18,15 +18,13 @@
     <h1 style="margin-bottom:10px;">Trainer Dashboard</h1>
 
     <div style="display:flex;gap:18px;align-items:center;margin-bottom:10px;">
-        <a class="btn" asp-page="/Dashboard" asp-route-year="@prevY" asp-route-month="@prevM"
-           asp-route-selected="@Model.selected">
+        <a class="btn" asp-page="/Dashboard" asp-route-year="@prevY" asp-route-month="@prevM" asp-route-selected="@Model.selected">
             ← @prevLabel
         </a>
 
         <div style="font-weight:800;font-size:22px;">@header</div>
 
-        <a class="btn" asp-page="/Dashboard" asp-route-year="@nextY" asp-route-month="@nextM"
-           asp-route-selected="@Model.selected">
+        <a class="btn" asp-page="/Dashboard" asp-route-year="@nextY" asp-route-month="@nextM" asp-route-selected="@Model.selected">
             @nextLabel →
         </a>
     </div>
@@ -44,8 +42,11 @@
                     var isSelected = Model.SelectedDates.Contains(cell.Date.Date);
                     var toggle = Model.ToggleSelection(cell.Date);
 
-                    <a class="cal-cell @(cell.InCurrentMonth ? "" : "muted") @(isSelected ? "selected" : "")" asp-page="/Dashboard"
-                       asp-route-year="@Model.VisibleYear" asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle"
+                    <a class="cal-cell @(cell.InCurrentMonth ? "" : "muted") @(isSelected ? "selected" : "")"
+                       asp-page="/Dashboard"
+                       asp-route-year="@Model.VisibleYear"
+                       asp-route-month="@Model.VisibleMonth"
+                       asp-route-selected="@toggle"
                        title="@cell.Date.ToString("dddd dd MMM")">
 
                         <div class="cal-date">@cell.Date.Day</div>
@@ -58,9 +59,7 @@
                 }
             </div>
 
-            <p style="color:var(--muted);margin-top:8px;">
-                Tip: click multiple days to compare on the right.
-            </p>
+            <p style="color:var(--muted);margin-top:8px;">Tip: click multiple days to compare on the right.</p>
         </section>
 
         <!-- RIGHT: Selected days panel -->
@@ -78,15 +77,22 @@
                     @foreach (var d in Model.SelectedDates.OrderBy(d => d))
                     {
                         var toggle = Model.ToggleSelection(d);
-                        <a class="badge" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
-                           asp-route-month="@Model.VisibleMonth" asp-route-selected="@toggle" title="Unselect">
+                        <a class="badge"
+                           asp-page="/Dashboard"
+                           asp-route-year="@Model.VisibleYear"
+                           asp-route-month="@Model.VisibleMonth"
+                           asp-route-selected="@toggle"
+                           title="Unselect">
                             @d.ToString("ddd dd MMM") ✕
                         </a>
                     }
 
                     <!-- Clear all -->
-                    <a class="badge" asp-page="/Dashboard" asp-route-year="@Model.VisibleYear"
-                       asp-route-month="@Model.VisibleMonth" asp-route-selected="">
+                    <a class="badge"
+                       asp-page="/Dashboard"
+                       asp-route-year="@Model.VisibleYear"
+                       asp-route-month="@Model.VisibleMonth"
+                       asp-route-selected="">
                         Clear all
                     </a>
                 </div>
@@ -98,34 +104,42 @@
                     var dateIso = card.Date.ToString("yyyy-MM-dd");
 
                     <div class="card day-card" data-date="@dateIso" style="padding:10px;margin-bottom:14px;">
+
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                             <div style="font-weight:800;">@card.Date.ToString("dddd dd MMM")</div>
 
                             <div style="display:flex;gap:6px;align-items:center;">
                                 <span class="muted" id="selcount-@dateIso" style="font-size:.9rem;"></span>
-
                                 <button type="button" class="btn" onclick="handleCancel('@dateIso')">Cancel</button>
                                 <button type="button" class="btn" onclick="handleAmend('@dateIso')">Amend</button>
                             </div>
                         </div>
 
                         @* ===== Timeline (read-only) ===== *@
+                        @{
+                            // window for this day card
+                            var dayStart = new TimeSpan(9, 0, 0);
+                            var dayEnd   = new TimeSpan(22, 0, 0);
+                            var totalMin = (int)(dayEnd - dayStart).TotalMinutes;
+
+                            // scale: 1.0 => 60px/hour, 1.2 => 72px/hour (tweak to taste)
+                            var pxPerMin     = 1.2;
+                            var scaledHeight = (int)Math.Round(totalMin * pxPerMin);
+                        }
+
                         @if (!card.Bookings.Any())
                         {
                             <div style="color:var(--muted);margin-top:8px;">No bookings yet.</div>
                         }
                         else
                         {
-                            var dayStart = new TimeSpan(6, 0, 0);   // shown window start
-                            var dayEnd   = new TimeSpan(21, 0, 0);  // shown window end
-                            var totalMin = (int)(dayEnd - dayStart).TotalMinutes;
-
-                            <div class="day-schedule" style="--px-per-min:1; --time-col:64px; height:@(totalMin)px;">
+                            <div class="day-schedule"
+                                style="--px-per-min:@pxPerMin; --time-col:64px; height:@(scaledHeight)px;">
                                 @* Hour grid *@
                                 @for (var h = dayStart.Hours; h <= dayEnd.Hours; h++)
                                 {
                                     var top = (h - dayStart.Hours) * 60; // minutes from start
-                                    <div class="hour-row" style="top:@(top)px;">
+                                    <div class="hour-row" style="--hour-top:@top;">
                                         <div class="hour-label">@($"{h:00}:00")</div>
                                         <div class="hour-line"></div>
                                     </div>
@@ -140,33 +154,37 @@
                                         if (end > dayEnd) end = dayEnd;
 
                                         var offsetMin = Math.Max(0, (int)(start - dayStart).TotalMinutes);
-                                        var heightMin = Math.Max(30, (int)(end - start).TotalMinutes); // ensure tap target
+                                        var durMin    = Math.Max(60, (int)(end - start).TotalMinutes); // min 60 mins
 
                                         <div class="event"
-                                            data-booking-id="@b.Id"
-                                            onclick="toggleEvent(this, '@dateIso')"
-                                            style="top:@(offsetMin)px;height:@(heightMin)px;">
+                                             data-booking-id="@b.Id"
+                                             onclick="toggleEvent(this, '@dateIso')"
+                                             style="--start-min:@offsetMin; --dur-min:@durMin;">
                                             <div class="event-click">
                                                 <div class="event-time">@b.StartTime.ToString(@"hh\:mm")</div>
-                                                <div class="event-title">
-                                                    <a class="link"
-                                                    asp-page="/Details"
-                                                    asp-route-id="@b.ClientId"
-                                                    onclick="event.stopPropagation();">
-                                                        @(b.Client?.Name ?? "Unknown client")
-                                                    </a>
+                                                <div class="event-title client-name">
+                                                    @(b.Client?.Name ?? "Unknown client")
                                                 </div>
-                                                <div class="event-meta">@b.SessionType • @(b.Duration.TotalMinutes) mins</div>
+
+                                            <div class="event-meta">@b.SessionType • @(b.Duration.TotalMinutes) mins</div>
+
+                                            <div class="event-actions">
+                                                <a class="btn btn-ghost btn-xs"
+                                                asp-page="/Details"
+                                                asp-route-id="@b.ClientId"
+                                                onclick="event.stopPropagation();">
+                                                    View client
+                                                </a>
                                             </div>
                                         </div>
+                                    </div>
                                     }
                                 </div>
                             </div>
                         }
-
-                    </div>
-                }
-            }
+                    </div> <!-- /.day-card -->
+                } <!-- /foreach day card -->
+            } <!-- /else (selected dates) -->
         </aside>
     </div>
 </div>
@@ -182,6 +200,7 @@
 </form>
 
 <style>
+    /* (kept inline so nothing else changes for now) */
     .cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-bottom:6px; color:var(--muted); font-weight:700; }
     .cal-weekdays>div { padding:4px 0; text-align:center; }
     .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
@@ -193,90 +212,23 @@
     .cal-count { position:absolute; right:8px; bottom:8px; font-size:.75rem; background:var(--pill-bg); border:1px solid var(--pill-border); border-radius:999px; padding:2px 6px; line-height:1; }
 
     .side-panel { position:sticky; top:16px; padding:12px; align-self:start; }
-
     .booking.selectable { border:1px solid var(--border); }
     .booking.selectable.selected { outline:2px solid var(--accent); outline-offset:0; }
     .muted { color:var(--muted); }
 
-    /* ===== Timeline styles ===== */
-    .timeline{
-        position:relative; height:42px; border:1px dashed var(--border);
-        border-radius:10px; background:rgba(127,127,127,0.08); margin-top:6px; overflow:hidden;
-    }
-    .tl-tick{
-        position:absolute; top:-1.2rem; transform:translateX(-50%); font-size:.72rem; color:var(--muted);
-    }
-    .tl-block{
-        position:absolute; top:4px; bottom:4px;
-        background:var(--accent); color:#000; border-radius:8px; padding:2px 6px; display:flex; align-items:center;
-        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; font-size:.8rem;
-    }
-    .tl-gap{
-        position:absolute; top:6px; bottom:6px; background:rgba(255,255,255,0.15);
-        border:1px dashed var(--border); border-radius:8px;
-    }
+    /* Day schedule */
+    .day-schedule { position:relative; background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-top:4px; }
+    .hour-row { position:absolute; left:0; right:0; top:calc(var(--hour-top) * var(--px-per-min) * 1px); height:calc(60 * var(--px-per-min)); transform:none; }
+    .hour-label { position:absolute; left:8px; width:var(--time-col); font-size:.8rem; color:var(--muted); top:-7px; }
+    .hour-line { position:absolute; left:calc(var(--time-col) + 6px); right:8px; top:0; height:1px; background: color-mix(in srgb, var(--border) 85%, transparent); }
 
-        /* === iOS-style day timeline === */
-    .day-schedule{
-    position: relative;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 4px;
-    }
-
-    /* Hour grid */
-    .hour-row{
-    position: absolute;
-    left: 0; right: 0;
-    height: calc(60 * var(--px-per-min));
-    transform: translateY(-.5px); /* crisp lines */
-    }
-    .hour-label{
-    position: absolute;
-    left: 8px;
-    width: var(--time-col);
-    font-size: .8rem;
-    color: var(--muted);
-    top: -7px;
-    }
-    .hour-line{
-    position: absolute;
-    left: calc(var(--time-col) + 6px);
-    right: 8px;
-    top: 0;
-    height: 1px;
-    background: color-mix(in srgb, var(--border) 85%, transparent);
-    }
-
-    /* Events layer */
-    .events-layer{
-    position: relative;
-    margin-left: calc(var(--time-col) + 12px);
-    margin-right: 8px;
-    }
-    .event{
-    position: absolute;
-    left: 0; right: 0;
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--accent) 12%, var(--card));
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
-    box-shadow: 0 2px 8px rgb(0 0 0 / .25);
-    cursor: pointer;
-    }
-    .event.selected{
-    outline: 2px solid var(--accent);
-    outline-offset: 0;
-    }
-    .event-click{ padding: 8px 10px; }
-    .event-time{ font-weight: 800; font-size: .9rem; margin-bottom: 2px; }
-    .event-title{ font-weight: 700; }
-    .event-meta{ font-size: .8rem; color: var(--muted); }
-
-    /* Keep your selected count pill tidy */
-    .day-card .muted{ color: var(--muted); }
-
+    .events-layer { position:relative; margin-left:calc(var(--time-col) + 12px); margin-right:8px; }
+    .event { position:absolute; left:0; right:0; top:calc(var(--start-min) * var(--px-per-min) * 1px); height:calc(var(--dur-min) * var(--px-per-min) * 1px); box-sizing:border-box; }
+    .event.selected { outline:2px solid var(--accent); outline-offset:0; }
+    .event-click { padding:8px 10px; }
+    .event-time { font-weight:800; font-size:.9rem; margin-bottom:2px; }
+    .event-title { font-weight:700; }
+    .event-meta { font-size:.8rem; color:var(--muted); }
 </style>
 
 <script>
@@ -288,22 +240,18 @@
     if (label) label.textContent = count > 0 ? `${count} selected` : '';
   }
 
-  // Exposed: toggles a single event
   window.toggleEvent = function(el, dateIso){
     el.classList.toggle('selected');
     const dayCard = el.closest('.day-card');
     if (dayCard) updateSelectedCount(dayCard);
   };
 
-  // Exposed: collect selected ids for a date
   window.getSelectedIdsForDate = function(dateIso){
     const day = document.querySelector(`.day-card[data-date="${dateIso}"]`);
     if (!day) return [];
-    return Array.from(day.querySelectorAll('.event.selected'))
-                .map(e => e.getAttribute('data-booking-id'));
+    return Array.from(day.querySelectorAll('.event.selected')).map(e => e.getAttribute('data-booking-id'));
   };
 
-  // Submit hidden POST form
   function submitBulk(actionHandler, dateIso, ids) {
     const form = document.getElementById('bulkActionForm');
     const y   = form.querySelector('input[name="returnYear"]').value;
@@ -315,7 +263,6 @@
     form.submit();
   }
 
-  // Exposed: bulk handlers
   window.handleCancel = function(dateIso){
     const ids = window.getSelectedIdsForDate(dateIso);
     if (ids.length === 0) {
