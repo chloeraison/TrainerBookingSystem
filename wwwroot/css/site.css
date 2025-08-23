@@ -223,8 +223,30 @@ a:hover, .link:hover, .nav-link:hover, .event-title a:hover {
 
 /* Chips */
 .chip {
-  display: inline-block; padding: 3px 10px; margin-right: 6px; border-radius: 999px;
-  font-weight: 600; color: var(--text); background: var(--pill-bg); border: 1px solid var(--pill-border);
+    white-space: nowrap;
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.4;
+    background: #333;
+    color: #eee;
+}
+.chip-blue {
+  background: #0b2a40;
+  color: #60a5fa;
+}
+
+/* new variants */
+.chip-green {
+    background: #14532d;   /* dark green bg */
+    color: #22c55e;        /* bright green text */
+}
+
+.chip-red {
+    background: #5b0a0a;   /* dark red bg */
+    color: #f87171;        /* soft red text */
 }
 
 /* Booking list (used elsewhere) */
@@ -447,14 +469,9 @@ border-radius: 10px; padding: 10px;
 .btn-circle-right { right: 10px; }
 
 /* Totals row spacing under counters */
-.session-totals{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-top: 12px;
-}
+.session-totals { display: none; }
 @media (max-width: 720px){
-  .session-totals{ grid-template-columns: 1fr; }
+  .session-totals{ display: none; }
 }
 
 /* Optional: give cards a little more vertical rhythm */

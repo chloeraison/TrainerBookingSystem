@@ -39,6 +39,77 @@
 
         <div>🌴 Holiday</div>
         <div>@(Model.HolidayText ?? "—")</div>
+
+        <!-- Mini two-week table -->
+        @{
+            var week1End = DateTime.Today.AddDays(7);
+            var allWeek1 = Model.Next2WeeksBookings
+                .Where(b => b.Date < week1End)
+                .OrderBy(b => b.Date).ThenBy(b => b.StartTime)
+                .ToList();
+
+            var showWeek1 = allWeek1.Take(4).ToList();
+            var moreWeek1 = allWeek1.Count - showWeek1.Count;
+
+            var allWeek2 = Model.Next2WeeksBookings
+                .Where(b => b.Date >= week1End)
+                .OrderBy(b => b.Date).ThenBy(b => b.StartTime)
+                .ToList();
+
+            var showWeek2 = allWeek2.Take(4).ToList();
+            var moreWeek2 = allWeek2.Count - showWeek2.Count;
+        }
+
+        <div class="grid grid-cols-2 gap-3 mt-2">
+        <!-- This week -->
+        <div>
+            <div class="text-sm font-medium opacity-80 mb-1">This week</div>
+            <div class="flex flex-wrap gap-2">
+            @if (!showWeek1.Any())
+            {
+                <span class="chip chip-red">❌ No sessions</span>
+            }
+            else
+            {
+                foreach (var b in showWeek1)
+                {
+                <span class="chip chip-green">
+                    ✅ @b.Date.ToString("ddd d MMM") · @b.StartTime.ToString(@"hh\:mm")
+                </span>
+                }
+                if (moreWeek1 > 0)
+                {
+                <span class="chip chip-blue">+@moreWeek1 more</span>
+                }
+            }
+            </div>
+        </div>
+
+        <!-- Next week -->
+        <div>
+            <div class="text-sm font-medium opacity-80 mb-1">Next week</div>
+            <div class="flex flex-wrap gap-2">
+            @if (!showWeek2.Any())
+            {
+                <span class="chip chip-red">❌ No sessions</span>
+            }
+            else
+            {
+                foreach (var b in showWeek2)
+                {
+                <span class="chip chip-green">
+                    ✅ @b.Date.ToString("ddd d MMM") · @b.StartTime.ToString(@"hh\:mm")
+                </span>
+                }
+                if (moreWeek2 > 0)
+                {
+                <span class="chip chip-blue">+@moreWeek2 more</span>
+                }
+            }
+            </div>
+        </div>
+        </div>
+
     </div>
 </section>
 
@@ -84,31 +155,6 @@
         </div>
     </div>
 </section>
-
-
-<div class="client-details-grid">
-    <section class="card">
-        <h2>🧾 Overview</h2>
-        <div class="kv">
-            <div>🏋️ Gym</div>
-            <div>@(Model.Client?.Gym ?? "—")</div>
-
-            <div>🕒 Pref. time</div>
-            <div>
-                @if (Model.PreferredTimeChips.Any())
-                {
-                    foreach (var chip in Model.PreferredTimeChips) { <span class="chip">@chip</span> }
-                }
-                else { <span class="muted">—</span> }
-            </div>
-
-            <div>📌 Notes</div>
-            <div>@(string.IsNullOrWhiteSpace(Model.Client?.Flags) ? "—" : Model.Client!.Flags)</div>
-
-            <div>🌴 Holiday</div>
-            <div>@(Model.HolidayText ?? "—")</div>
-        </div>
-    </section>
 
     <section class="card span-2">
         <h2>📅 Upcoming</h2>
