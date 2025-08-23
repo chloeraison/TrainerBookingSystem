@@ -2,6 +2,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"]Booking System</title>
+    
+    <script>
+    (function () {
+        // Try cookie first (works across full reloads), fall back to localStorage, then default
+        var m = document.cookie.match(/(?:^|;\s*)theme=([^;]+)/);
+        var theme = (m && decodeURIComponent(m[1])) || localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+    })();
+    </script>
+
+    @{
+    var themeCookie = Context.Request.Cookies["theme"] ?? "dark";
+    }
+    <html data-theme="@themeCookie">
 
     <!-- ✅ Bootstrap first -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
@@ -59,21 +73,27 @@
     <!-- Theme Script -->
     <script>
         (function () {
-            const saved = localStorage.getItem('theme');
-            const root = document.documentElement;
-            if (saved === 'dark' || saved === 'light') {
-                root.setAttribute('data-theme', saved);
-                document.getElementById('themeIcon').textContent = saved === 'dark' ? '☀️' : '🌙';
-            }
+        const root = document.documentElement;
+        const btn  = document.getElementById('themeToggle');
+        const icon = document.getElementById('themeIcon');
 
-            document.getElementById('themeToggle')?.addEventListener('click', function (e) {
-                e.preventDefault();
-                const current = root.getAttribute('data-theme');
-                const next = current === 'dark' ? 'light' : 'dark';
-                root.setAttribute('data-theme', next);
-                localStorage.setItem('theme', next);
-                document.getElementById('themeIcon').textContent = next === 'dark' ? '☀️' : '🌙';
-            });
+        function setTheme(theme) {
+            root.setAttribute('data-theme', theme);
+            try { localStorage.setItem('theme', theme); } catch {}
+            document.cookie = "theme=" + encodeURIComponent(theme)
+            + "; path=/; max-age=" + (60*60*24*400)   // ~400 days
+            + "; samesite=lax";
+            if (icon) icon.textContent = (theme === 'dark') ? '☀️' : '🌙';
+        }
+
+        // Ensure icon matches whatever the early boot set
+        setTheme(root.getAttribute('data-theme') || 'dark');
+
+        btn?.addEventListener('click', function (e) {
+            e.preventDefault();
+            const next = (root.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark';
+            setTheme(next);
+        });
         })();
     </script>
 </body>
