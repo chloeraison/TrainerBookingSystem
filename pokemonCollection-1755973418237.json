@@ -1,0 +1,58 @@
+[
+  {
+    "color": "default",
+    "type": "dragonite",
+    "size": "nano",
+    "name": "Lily",
+    "generation": "gen1",
+    "originalSpriteSize": 32
+  },
+  {
+    "color": "default",
+    "type": "cyndaquil",
+    "size": "nano",
+    "name": "Dexter",
+    "generation": "gen2",
+    "originalSpriteSize": 32
+  },
+  {
+    "color": "default",
+    "type": "lugia",
+    "size": "nano",
+    "name": "Awesome",
+    "generation": "gen2",
+    "originalSpriteSize": 64
+  },
+  {
+    "color": "default",
+    "type": "marill",
+    "size": "nano",
+    "name": "Harvey",
+    "generation": "gen2",
+    "originalSpriteSize": 32
+  },
+  {
+    "color": "default",
+    "type": "chansey",
+    "size": "nano",
+    "name": "Cookie",
+    "generation": "gen1",
+    "originalSpriteSize": 32
+  },
+  {
+    "color": "default",
+    "type": "slowpoke",
+    "size": "nano",
+    "name": "Leo",
+    "generation": "gen1",
+    "originalSpriteSize": 32
+  },
+  {
+    "color": "default",
+    "type": "lapras",
+    "size": "nano",
+    "name": "Pepper",
+    "generation": "gen1",
+    "originalSpriteSize": 32
+  }
+]
