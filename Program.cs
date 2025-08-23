@@ -3,29 +3,39 @@ using TrainerBookingSystem.Web.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Build an absolute path to the DB so all contexts use the same file
-var dbPath = Path.Combine(builder.Environment.ContentRootPath, "trainerbooking.db");
+// ---------- Database path (always absolute, inside App_Data) ----------
+var dataDir = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
+Directory.CreateDirectory(dataDir); // ensure folder exists
+var dbFile = Path.Combine(dataDir, "trainerbooking.db");
+var sqliteCstr = $"Data Source={dbFile}";
 
+// services
 builder.Services.AddRazorPages();
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlite($"Data Source={dbPath}")
-);
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(sqliteCstr));
 
 var app = builder.Build();
 
-// Seed once, after the app is built, using the app's ServiceProvider
+// ---------- Seed once, with defensive try/catch ----------
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // Optional for dev reset:
-    // db.Database.EnsureDeleted();
-    db.Database.EnsureCreated();
-    DummyData.Seed(db);
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.EnsureCreated();
+        DummyData.Seed(db);
+    }
+    catch (Exception ex)
+    {
+        // Log to console so you see it in server logs
+        Console.WriteLine("DB init/seed failed: " + ex);
+        // don’t rethrow in production; the site will still boot and you’ll see logs
+    }
 }
 
+// middleware
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error");
+    app.UseExceptionHandler("/Error"); // keep generic error page in prod
     app.UseHsts();
 }
 
