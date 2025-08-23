@@ -5,117 +5,124 @@
 }
 
 <section class="client-header">
-    <a asp-page="/Clients" class="btn btn-ghost">← Back to Clients</a>
-    <h1>👤 @Model.Client?.Name</h1>
+  <a asp-page="/Clients" class="btn btn-ghost back">← Back to Clients</a>
 
-    <div class="quick-actions">
-        @if (!string.IsNullOrWhiteSpace(Model.Client?.Phone))
-        {
-            <a class="btn" href="https://wa.me/@Model.Client!.Phone" target="_blank" rel="noopener">💬 WhatsApp</a>
-        }
-        <a class="btn btn-accent" asp-page="/Bookings/Create" asp-route-clientId="@Model.Client?.Id">＋ New booking</a>
-        <a class="btn" asp-page="/Clients/Edit" asp-route-id="@Model.Client?.Id">✏️ Edit</a>
-    </div>
+  <div class="client-title-inline">
+    <span class="avatar-emoji" aria-hidden="true">👤</span>
+    <h1 class="client-title">@Model.Client?.Name</h1>
+  </div>
 </section>
 
 <!-- === Overview FIRST === -->
 <section class="card">
+  <div class="card-head">
     <h2>🧾 Overview</h2>
-    <div class="kv">
-        <div>🏋️ Gym</div>
-        <div>@(Model.Client?.Gym ?? "—")</div>
+    <a class="btn-icon btn-icon-xs"
+       asp-page="/Clients/Edit"
+       asp-route-id="@Model.Client?.Id"
+       title="Edit client"
+       aria-label="Edit client">✏️</a>
+  </div>
 
-        <div>🕒 Pref. time</div>
-        <div>
-            @if (Model.PreferredTimeChips.Any())
-            {
-                foreach (var chip in Model.PreferredTimeChips) { <span class="chip">@chip</span> }
-            }
-            else { <span class="muted">—</span> }
-        </div>
+  <div class="kv">
+    <div>🏋️ Gym</div>
+    <div>@(Model.Client?.Gym ?? "—")</div>
 
-        <div>📌 Notes</div>
-        <div>@(string.IsNullOrWhiteSpace(Model.Client?.Flags) ? "—" : Model.Client!.Flags)</div>
-
-        <div>🌴 Holiday</div>
-        <div>@(Model.HolidayText ?? "—")</div>
-
-        <!-- Mini two-week table -->
-        @{
-            var week1End = DateTime.Today.AddDays(7);
-            var allWeek1 = Model.Next2WeeksBookings
-                .Where(b => b.Date < week1End)
-                .OrderBy(b => b.Date).ThenBy(b => b.StartTime)
-                .ToList();
-
-            var showWeek1 = allWeek1.Take(4).ToList();
-            var moreWeek1 = allWeek1.Count - showWeek1.Count;
-
-            var allWeek2 = Model.Next2WeeksBookings
-                .Where(b => b.Date >= week1End)
-                .OrderBy(b => b.Date).ThenBy(b => b.StartTime)
-                .ToList();
-
-            var showWeek2 = allWeek2.Take(4).ToList();
-            var moreWeek2 = allWeek2.Count - showWeek2.Count;
-        }
-
-        <div class="grid grid-cols-2 gap-3 mt-2">
-        <!-- This week -->
-        <div>
-            <div class="text-sm font-medium opacity-80 mb-1">This week</div>
-            <div class="flex flex-wrap gap-2">
-            @if (!showWeek1.Any())
-            {
-                <span class="chip chip-red">❌ No sessions</span>
-            }
-            else
-            {
-                foreach (var b in showWeek1)
-                {
-                <span class="chip chip-green">
-                    ✅ @b.Date.ToString("ddd d MMM") · @b.StartTime.ToString(@"hh\:mm")
-                </span>
-                }
-                if (moreWeek1 > 0)
-                {
-                <span class="chip chip-blue">+@moreWeek1 more</span>
-                }
-            }
-            </div>
-        </div>
-
-        <!-- Next week -->
-        <div>
-            <div class="text-sm font-medium opacity-80 mb-1">Next week</div>
-            <div class="flex flex-wrap gap-2">
-            @if (!showWeek2.Any())
-            {
-                <span class="chip chip-red">❌ No sessions</span>
-            }
-            else
-            {
-                foreach (var b in showWeek2)
-                {
-                <span class="chip chip-green">
-                    ✅ @b.Date.ToString("ddd d MMM") · @b.StartTime.ToString(@"hh\:mm")
-                </span>
-                }
-                if (moreWeek2 > 0)
-                {
-                <span class="chip chip-blue">+@moreWeek2 more</span>
-                }
-            }
-            </div>
-        </div>
-        </div>
-
+    <div>🕒 Pref. time</div>
+    <div>
+      @if (Model.PreferredTimeChips.Any())
+      {
+        foreach (var chip in Model.PreferredTimeChips) { <span class="chip">@chip</span> }
+      }
+      else { <span class="muted">—</span> }
     </div>
+
+    <div>📌 Notes</div>
+    <div>@(string.IsNullOrWhiteSpace(Model.Client?.Flags) ? "—" : Model.Client!.Flags)</div>
+
+    <div>🌴 Holiday</div>
+    <div>@(Model.HolidayText ?? "—")</div>
+  </div>
+
+  @* keep your existing mini two-week table here, unchanged *@
+  @{
+      var week1End = DateTime.Today.AddDays(7);
+      var allWeek1 = Model.Next2WeeksBookings
+          .Where(b => b.Date < week1End)
+          .OrderBy(b => b.Date).ThenBy(b => b.StartTime)
+          .ToList();
+
+      var showWeek1 = allWeek1.Take(4).ToList();
+      var moreWeek1 = allWeek1.Count - showWeek1.Count;
+
+      var allWeek2 = Model.Next2WeeksBookings
+          .Where(b => b.Date >= week1End)
+          .OrderBy(b => b.Date).ThenBy(b => b.StartTime)
+          .ToList();
+
+      var showWeek2 = allWeek2.Take(4).ToList();
+      var moreWeek2 = allWeek2.Count - showWeek2.Count;
+  }
+
+  <div class="grid grid-cols-2 gap-3 mt-2">
+    <!-- This week -->
+    <div>
+      <div class="text-sm font-medium opacity-80 mb-1">This week</div>
+      <div class="flex flex-wrap gap-2">
+        @if (!showWeek1.Any()) {
+          <span class="chip chip-red">❌ No sessions</span>
+        } else {
+          foreach (var b in showWeek1) {
+            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime.ToString(@"hh\:mm")</span>
+          }
+          if (moreWeek1 > 0) { <span class="chip chip-blue">+@moreWeek1 more</span> }
+        }
+      </div>
+    </div>
+
+    <!-- Next week -->
+    <div>
+      <div class="text-sm font-medium opacity-80 mb-1">Next week</div>
+      <div class="flex flex-wrap gap-2">
+        @if (!showWeek2.Any()) {
+          <span class="chip chip-red">❌ No sessions</span>
+        } else {
+          foreach (var b in showWeek2) {
+            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime.ToString(@"hh\:mm")</span>
+          }
+          if (moreWeek2 > 0) { <span class="chip chip-blue">+@moreWeek2 more</span> }
+        }
+      </div>
+    </div>
+  </div>
 </section>
 
 
+
 <section class="card">
-    <h2>🎯 Sessions</h2>
+    <div class="card-head">
+        <h2>🎯 Sessions</h2>
+
+        @* primary CTA in-context *@
+        @if (Model.Client!.SessionsLeft > 0)
+        {
+        <a class="btn btn-accent btn-sm"
+            asp-page="/Bookings/Create"
+            asp-route-clientId="@Model.Client?.Id"
+            aria-label="Create a new booking for this client">
+            ＋ New booking
+        </a>
+        }
+        else
+        {
+        <a class="btn btn-sm"
+            asp-page="/Clients/Edit"
+            asp-route-id="@Model.Client?.Id"
+            title="No sessions left — top up">
+            Add sessions
+        </a>
+        }
+    </div>
 
     <div class="session-boxes">
         <!-- Left -->

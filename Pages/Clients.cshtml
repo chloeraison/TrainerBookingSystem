@@ -4,38 +4,47 @@
     ViewData["Title"] = "Clients";
 }
 
-<section>
-    <h1>👥 Clients</h1>
+<section class="card">
+  <h2>👥 Clients</h2>
 
-    <a class="btn mb-3" asp-page="/Clients/Add">➕ Add New Client</a>
+  <table class="client-table slim">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th class="col-sessions">Sessions</th>
+      </tr>
+    </thead>
+    <tbody>
+    @foreach (var c in Model.Clients)
+    {
+        var pref = string.IsNullOrWhiteSpace(c.PreferredTimes)
+            ? null
+            : c.PreferredTimes.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                              .FirstOrDefault();
 
-    <div class="table-responsive">
-        <table class="table client-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>🏋️ Gym</th>
-                    <th>🕒 Pref. Time</th>
-                    <th style="text-align:right;">Sessions</th>
-                    <th style="text-align:right;">Completed</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var c in Model.Clients)
-            {
-                <tr>
-                    <td>
-                        <a class="link" asp-page="/Details" asp-route-id="@c.Id">
-                            @c.Name
-                        </a>
-                    </td>
-                    <td>@c.Gym</td>
-                    <td>@c.PreferredTimes</td>
-                    <td style="text-align:right; font-weight:700;">@c.SessionsLeft</td>
-                    <td style="text-align:right;">@c.SessionsCompleted</td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    </div>
+        var total = (c.SessionsLeft + c.SessionsCompleted);
+        var pct   = total > 0 ? (int)Math.Round(100.0 * c.SessionsCompleted / total) : 0;
+
+        <tr>
+          <td class="name">
+            <a asp-page="/Details" asp-route-id="@c.Id">@c.Name</a>
+            <div class="meta">
+              @if (!string.IsNullOrWhiteSpace(c.Gym)) { <span class="chip chip-muted">@c.Gym</span> }
+              @if (!string.IsNullOrEmpty(pref))       { <span class="chip chip-blue">@pref</span> }
+            </div>
+          </td>
+
+          <td class="col-sessions">
+            <div class="pills">
+              <span class="pill pill-green" title="Left">@c.SessionsLeft</span>
+              <span class="pill pill-muted" title="Completed">@c.SessionsCompleted</span>
+            </div>
+            <div class="mini-progress" aria-label="Completion">
+              <span style="width:@pct%"></span>
+            </div>
+          </td>
+        </tr>
+    }
+    </tbody>
+  </table>
 </section>
