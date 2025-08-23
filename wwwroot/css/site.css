@@ -389,23 +389,41 @@ border-radius: 10px; padding: 10px;
   .counter-box{ padding:18px 46px; }
   .btn-circle{ width:34px; height:34px; font-size:1rem; }
   .counter-value{ font-size:1.6rem; }
-  .counter-title{ font-size:.95rem; }
+  .counter-title{ font-weight: 700;  text-align: center;  flex: 1; }
 }
+
 
 .counter-box{
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;                 /* was grid */
+  flex-direction: column;        /* stack title + value */
+  align-items: center;           /* center horizontally */
+  justify-content: center;       /* center vertically */
   row-gap: 6px;
-  padding: 22px 56px;               /* space for the +/- buttons */
+  padding: 22px 56px;            /* space for +/- */
   background: color-mix(in oklab, var(--card) 92%, black 8%);
   border: 1px solid var(--border);
   border-radius: 12px;
   min-height: 96px;
 }
 
-.counter-title{ font-weight: 800; font-size: 1rem; }
-.counter-value{ font-weight: 900; font-size: 2rem; line-height: 1; }
+.counter-title{
+  font-weight: 700;
+  text-align: center;
+  width: 100%;                   /* ensure full width for centering */
+}
+
+.counter-value{
+  font-weight: 900;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+@media (max-width: 480px){
+  .counter-box{ padding: 18px 46px; }  /* slightly tighter so label sits dead center */
+  .btn-circle{ width:34px; height:34px; font-size:1rem; }
+  .counter-value{ font-size:1.6rem; }
+}
 
 .btn-circle{
   position: absolute;
