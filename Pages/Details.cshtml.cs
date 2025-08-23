@@ -68,6 +68,52 @@ namespace TrainerBookingSystem.Web.Pages
             ShowEditModal = true;
             return Page();
         }
+        
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OnPostAdjustCounterAsync(int id, string target, int delta)
+        {
+            // Load the client
+            var client = await _db.Clients.FirstOrDefaultAsync(c => c.Id == id);
+            if (client is null) return NotFound();
+
+            target = (target ?? "").Trim().ToLowerInvariant();
+            delta = Math.Clamp(delta, -5, 5); // small guardrail
+
+            switch (target)
+            {
+                case "left":
+                    // Directly adjust SessionsLeft (e.g. client buys more)
+                    var newLeft = client.SessionsLeft + delta;
+                    client.SessionsLeft = Math.Max(0, newLeft);
+                    break;
+
+                case "completed":
+                    // Completing consumes from Left; undoing gives back to Left
+
+                    if (delta > 0)
+                    {
+                        // You can only complete up to what's left
+                        var take = Math.Min(delta, client.SessionsLeft);
+                        client.SessionsCompleted += take;
+                        client.SessionsLeft      -= take;
+                    }
+                    else if (delta < 0)
+                    {
+                        // You can only undo up to what’s completed
+                        var give = Math.Min(-delta, client.SessionsCompleted);
+                        client.SessionsCompleted -= give;
+                        client.SessionsLeft      += give;
+                    }
+                    break;
+
+                default:
+                    return BadRequest("Unknown counter target.");
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToPage(new { id });
+        }
+
 
         public async Task<IActionResult> OnPostRescheduleAsync()
         {
@@ -77,9 +123,9 @@ namespace TrainerBookingSystem.Web.Pages
                                             .FirstOrDefaultAsync(b => b.Id == EditBookingId);
             if (booking is null) return await OnGetAsync();
 
-            var targetDate  = NewStartLocal.Date;
+            var targetDate = NewStartLocal.Date;
             var targetStart = NewStartLocal.TimeOfDay;
-            var targetEnd   = targetStart + booking.Duration;
+            var targetEnd = targetStart + booking.Duration;
 
             var others = await _db.Bookings
                 .Where(b => b.IsConfirmed && b.Date == targetDate && b.Id != booking.Id)
@@ -91,7 +137,7 @@ namespace TrainerBookingSystem.Web.Pages
             foreach (var ob in others)
             {
                 var obStart = ob.StartTime;
-                var obEnd   = ob.StartTime + ob.Duration;
+                var obEnd = ob.StartTime + ob.Duration;
                 if (targetStart < obEnd && targetEnd > obStart)
                 {
                     clashing.Add(ob);
@@ -115,7 +161,7 @@ namespace TrainerBookingSystem.Web.Pages
                 foreach (var cb in clashing) cb.IsConfirmed = false; // soft-cancel clashes
             }
 
-            booking.Date      = targetDate;
+            booking.Date = targetDate;
             booking.StartTime = targetStart;
 
             await _db.SaveChangesAsync();

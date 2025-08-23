@@ -56,7 +56,7 @@
             <button class="btn-circle btn-circle-left" name="delta" value="-1" aria-label="decrease left">−</button>
             <div class="counter-title">Left</div>
             <div class="counter-value">@Model.Client!.SessionsLeft</div>
-            <button class="btn-circle btn-circle-right" name="delta" value="+1" aria-label="increase left">+</button>
+            <button class="btn-circle btn-circle-right" name="delta" value="1" aria-label="increase left">+</button>
         </form>
 
         <!-- Completed -->
@@ -68,9 +68,9 @@
             <button class="btn-circle btn-circle-left" name="delta" value="-1" aria-label="decrease completed">−</button>
             <div class="counter-title">Completed</div>
             <div class="counter-value">@Model.Client!.SessionsCompleted</div>
-            <button class="btn-circle btn-circle-right" name="delta" value="+1" aria-label="increase completed">+</button>
+            <button class="btn-circle btn-circle-right" name="delta" value="1" aria-label="increase completed">+</button>
         </form>
-    </div>
+        </div>
 
     <!-- week / month totals under the counters -->
     <div class="session-totals">
