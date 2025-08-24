@@ -3,46 +3,65 @@ using TrainerBookingSystem.Web.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------- Database path (always absolute, inside App_Data) ----------
+// -------- Storage: SQLite file under App_Data --------
 var dataDir = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
-Directory.CreateDirectory(dataDir); // ensure folder exists
+Directory.CreateDirectory(dataDir);
 var dbFile = Path.Combine(dataDir, "trainerbooking.db");
-var sqliteCstr = $"Data Source={dbFile}";
+var sqlite = $"Data Source={dbFile}";
 
-// services
+// Services
 builder.Services.AddRazorPages();
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(sqliteCstr));
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(sqlite));
+
+// (nice to have) show EF SQL in Dev
+if (builder.Environment.IsDevelopment())
+{
+    builder.Logging.AddConsole();
+    builder.Logging.AddDebug();
+    builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
+    builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Query", LogLevel.Warning);
+}
 
 var app = builder.Build();
 
-// ---------- Seed once, with defensive try/catch ----------
+// -------- Create/upgrade DB, then seed if empty --------
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     try
     {
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.EnsureCreated();
-        DummyData.Seed(db);
+        db.Database.Migrate(); // apply migrations (creates file if missing)
+
+        // Seed once (only when both tables empty)
+        if (!db.Clients.Any() && !db.Bookings.Any())
+        {
+            DummyData.Seed(db);
+            Console.WriteLine("Seeded sample data.");
+        }
+
+        Console.WriteLine($"DB ready → Clients={db.Clients.Count()}  Bookings={db.Bookings.Count()}  Path={dbFile}");
     }
     catch (Exception ex)
     {
-        // Log to console so you see it in server logs
-        Console.WriteLine("DB init/seed failed: " + ex);
-        // don’t rethrow in production; the site will still boot and you’ll see logs
+        Console.WriteLine("DB migrate/seed failed: " + ex);
     }
 }
 
-// middleware
-if (!app.Environment.IsDevelopment())
+// -------- Middleware pipeline --------
+if (app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error"); // keep generic error page in prod
+    app.UseDeveloperExceptionPage();      // detailed errors locally
+}
+else
+{
+    app.UseExceptionHandler("/Error");    // generic error page in prod
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-app.UseAuthorization();
+// (no auth yet)
 app.MapRazorPages();
 
 app.Run();
