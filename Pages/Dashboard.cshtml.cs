@@ -13,8 +13,8 @@ namespace TrainerBookingSystem.Web.Pages
         public DashboardModel(AppDbContext db) => _db = db;
 
         // ====== Working window for the timeline (adjust later in settings) ======
-        private static readonly TimeSpan WorkingStart = new(6, 0, 0);  // 06:00
-        private static readonly TimeSpan WorkingEnd   = new(22, 0, 0); // 22:00
+        private static readonly TimeSpan WorkingStart = new(6, 0, 0);   // 06:00
+        private static readonly TimeSpan WorkingEnd   = new(22, 0, 0);  // 22:00
         public double WindowMinutes => (WorkingEnd - WorkingStart).TotalMinutes;
 
         // ====== Querystring / state ======
@@ -36,14 +36,14 @@ namespace TrainerBookingSystem.Web.Pages
         {
             // determine visible month
             var today = DateTime.Today;
-            VisibleYear = year ?? today.Year;
+            VisibleYear  = year  ?? today.Year;
             VisibleMonth = month ?? today.Month;
             FirstOfMonth = new DateTime(VisibleYear, VisibleMonth, 1);
 
             // build month grid (start Monday, 6 rows)
-            var start = FirstOfMonth;
+            var start       = FirstOfMonth;
             int offsetToMon = ((int)start.DayOfWeek + 6) % 7;
-            var gridStart = start.AddDays(-offsetToMon);
+            var gridStart   = start.AddDays(-offsetToMon);
             for (int i = 0; i < 42; i++)
             {
                 var d = gridStart.AddDays(i).Date;
@@ -67,7 +67,8 @@ namespace TrainerBookingSystem.Web.Pages
             // pre-load counts for the month
             var monthEnd = FirstOfMonth.AddMonths(1);
             var monthBookings = await _db.Bookings
-                .Where(b => b.IsConfirmed && b.Date >= FirstOfMonth && b.Date < monthEnd)
+                .Where(b => b.Status == BookingStatus.Scheduled
+                         && b.Date >= FirstOfMonth && b.Date < monthEnd)
                 .ToListAsync();
 
             var counts = monthBookings
@@ -87,7 +88,8 @@ namespace TrainerBookingSystem.Web.Pages
 
                 // get from DB first…
                 var list = await _db.Bookings
-                    .Where(b => b.IsConfirmed && b.Date >= min && b.Date < max)
+                    .Where(b => b.Status == BookingStatus.Scheduled
+                             && b.Date >= min && b.Date < max)
                     .Include(b => b.Client)
                     .ToListAsync();
 
@@ -123,10 +125,11 @@ namespace TrainerBookingSystem.Web.Pages
                 .ToList();
         }
 
-        // ====== POST handlers (existing) ======
+        // ====== POST handlers ======
 
         // Cancels selected bookings; if none selected, cancels all on that day
-        public async Task<IActionResult> OnPostCancelBookingsAsync(string date, string? bookingIdsCsv, int? returnYear, int? returnMonth, string? returnSelected)
+        public async Task<IActionResult> OnPostCancelBookingsAsync(
+            string date, string? bookingIdsCsv, int? returnYear, int? returnMonth, string? returnSelected)
         {
             if (!TryParseDate(date, out var day))
                 return BadRequest("Invalid date");
@@ -137,52 +140,64 @@ namespace TrainerBookingSystem.Web.Pages
             if (ids.Count > 0) query = query.Where(b => ids.Contains(b.Id));
 
             var bookings = await query.ToListAsync();
-            foreach (var b in bookings) b.IsConfirmed = false; // or _db.Bookings.RemoveRange(bookings);
+            foreach (var b in bookings)
+            {
+                b.Status     = BookingStatus.Cancelled; // soft-cancel
+                b.UpdatedAt  = DateTime.UtcNow;
+            }
 
             await _db.SaveChangesAsync();
 
             return RedirectToPage("/Dashboard", new
             {
-                year = returnYear ?? day.Year,
-                month = returnMonth ?? day.Month,
+                year     = returnYear ?? day.Year,
+                month    = returnMonth ?? day.Month,
                 selected = returnSelected ?? selected
             });
         }
 
-        public async Task<IActionResult> OnPostAmendBookingsAsync(string date, string? bookingIdsCsv, int? returnYear, int? returnMonth, string? returnSelected)
+        public async Task<IActionResult> OnPostAmendBookingsAsync(
+            string date, string? bookingIdsCsv, int? returnYear, int? returnMonth, string? returnSelected)
         {
             if (!TryParseDate(date, out var day))
                 return BadRequest("Invalid date");
 
             var ids = ParseIds(bookingIdsCsv);
 
-            // If none selected -> treat as ALL for that day
+            // If none selected -> treat as ALL scheduled for that day
             if (ids.Count == 0)
             {
                 ids = await _db.Bookings
-                            .Where(b => b.Date.Date == day.Date)
-                            .Select(b => b.Id)
-                            .ToListAsync();
+                    .Where(b => b.Date.Date == day.Date && b.Status == BookingStatus.Scheduled)
+                    .Select(b => b.Id)
+                    .ToListAsync();
+
                 if (ids.Count == 0)
-                    return RedirectToPage("/Dashboard", new { year = returnYear ?? day.Year, month = returnMonth ?? day.Month, selected = returnSelected ?? selected });
+                    return RedirectToPage("/Dashboard", new
+                    {
+                        year     = returnYear ?? day.Year,
+                        month    = returnMonth ?? day.Month,
+                        selected = returnSelected ?? selected
+                    });
             }
 
             // 1 or many -> BulkAmend
             var csv = string.Join(",", ids);
             return RedirectToPage("/Bookings/BulkAmend", new
             {
-                ids = csv,
-                date = day.ToString("yyyy-MM-dd"),
-                year = returnYear ?? day.Year,
-                month = returnMonth ?? day.Month,
+                ids     = csv,
+                date    = day.ToString("yyyy-MM-dd"),
+                year    = returnYear ?? day.Year,
+                month   = returnMonth ?? day.Month,
                 selected = returnSelected ?? selected
             });
         }
 
         // ====== helpers ======
         private static bool TryParseDate(string s, out DateTime day) =>
-            DateTime.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture,
-                                   DateTimeStyles.AssumeLocal, out day);
+            DateTime.TryParseExact(
+                s, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeLocal, out day);
 
         private static List<int> ParseIds(string? csv)
         {

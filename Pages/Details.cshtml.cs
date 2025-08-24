@@ -26,17 +26,20 @@ namespace TrainerBookingSystem.Web.Pages
 
         private Next2WeeksStatus GetNext2WeeksStatus(int clientId)
         {
-            var today = DateTime.Today;
+            var today   = DateTime.Today;
             var week1End = today.AddDays(7);
             var week2End = today.AddDays(14);
 
             var q = _db.Bookings
-                .Where(b => b.ClientId == clientId && b.Date >= today && b.Date < week2End);
+                .Where(b => b.ClientId == clientId
+                            && b.Status == BookingStatus.Scheduled
+                            && b.Date >= today && b.Date < week2End);
 
             var week1 = q.Any(b => b.Date < week1End);
             var week2 = q.Any(b => b.Date >= week1End && b.Date < week2End);
             return new Next2WeeksStatus(week1 || week2, week1, week2);
         }
+
         public int WeekCount { get; private set; }
         public int MonthCount { get; private set; }
         public List<string> PreferredTimeChips { get; private set; } = new();
@@ -55,16 +58,26 @@ namespace TrainerBookingSystem.Web.Pages
             return Client is null ? NotFound() : Page();
         }
 
-
-
         public async Task<IActionResult> OnPostMarkCompletedAsync(int bookingId)
         {
             var booking = await _db.Bookings
+                .Include(b => b.Client)
                 .FirstOrDefaultAsync(b => b.Id == bookingId && b.ClientId == Id);
+
             if (booking is null) return NotFound();
 
-            booking.IsConfirmed = false; // soft-complete
-            // TODO: increment SessionsCompleted / decrement SessionsLeft when those fields exist on Client
+            // Mark the booking as completed
+            booking.Status    = BookingStatus.Completed;
+            booking.UpdatedAt = DateTime.UtcNow;
+
+            // Adjust counters (best-effort guards)
+            if (booking.Client is not null)
+            {
+                if (booking.Client.SessionsLeft > 0)
+                    booking.Client.SessionsLeft -= 1;
+
+                booking.Client.SessionsCompleted += 1;
+            }
 
             await _db.SaveChangesAsync();
             return RedirectToPage(new { id = Id });
@@ -73,8 +86,8 @@ namespace TrainerBookingSystem.Web.Pages
         public async Task<IActionResult> OnPostViewBookingAsync(int bookingId)
         {
             await LoadClientAndLists();
-            ViewBooking = await _db.Bookings.Include(b => b.Client)
-                                            .FirstOrDefaultAsync(b => b.Id == bookingId);
+            ViewBooking  = await _db.Bookings.Include(b => b.Client)
+                                             .FirstOrDefaultAsync(b => b.Id == bookingId);
             ShowViewModal = ViewBooking != null;
             return Page();
         }
@@ -94,37 +107,30 @@ namespace TrainerBookingSystem.Web.Pages
 
         public async Task<IActionResult> OnPostAdjustCounterAsync(int id, string target, int delta)
         {
-            // Load the client
             var client = await _db.Clients.FirstOrDefaultAsync(c => c.Id == id);
             if (client is null) return NotFound();
 
             target = (target ?? "").Trim().ToLowerInvariant();
-            delta = Math.Clamp(delta, -5, 5); // small guardrail
+            delta  = Math.Clamp(delta, -5, 5); // guardrail
 
             switch (target)
             {
                 case "left":
-                    // Directly adjust SessionsLeft (e.g. client buys more)
-                    var newLeft = client.SessionsLeft + delta;
-                    client.SessionsLeft = Math.Max(0, newLeft);
+                    client.SessionsLeft = Math.Max(0, client.SessionsLeft + delta);
                     break;
 
                 case "completed":
-                    // Completing consumes from Left; undoing gives back to Left
-
                     if (delta > 0)
                     {
-                        // Can only complete up to what's left
                         var take = Math.Min(delta, client.SessionsLeft);
                         client.SessionsCompleted += take;
-                        client.SessionsLeft -= take;
+                        client.SessionsLeft      -= take;
                     }
                     else if (delta < 0)
                     {
-                        // Can only undo up to what’s completed
                         var give = Math.Min(-delta, client.SessionsCompleted);
                         client.SessionsCompleted -= give;
-                        client.SessionsLeft += give;
+                        client.SessionsLeft      += give;
                     }
                     break;
 
@@ -136,7 +142,6 @@ namespace TrainerBookingSystem.Web.Pages
             return RedirectToPage(new { id });
         }
 
-
         public async Task<IActionResult> OnPostRescheduleAsync()
         {
             await LoadClientAndLists();
@@ -145,12 +150,14 @@ namespace TrainerBookingSystem.Web.Pages
                                             .FirstOrDefaultAsync(b => b.Id == EditBookingId);
             if (booking is null) return await OnGetAsync();
 
-            var targetDate = NewStartLocal.Date;
+            var targetDate  = NewStartLocal.Date;
             var targetStart = NewStartLocal.TimeOfDay;
-            var targetEnd = targetStart + booking.Duration;
+            var targetEnd   = targetStart + booking.Duration;
 
             var others = await _db.Bookings
-                .Where(b => b.IsConfirmed && b.Date == targetDate && b.Id != booking.Id)
+                .Where(b => b.Status == BookingStatus.Scheduled
+                            && b.Date == targetDate
+                            && b.Id != booking.Id)
                 .Include(b => b.Client)
                 .ToListAsync();
 
@@ -159,7 +166,7 @@ namespace TrainerBookingSystem.Web.Pages
             foreach (var ob in others)
             {
                 var obStart = ob.StartTime;
-                var obEnd = ob.StartTime + ob.Duration;
+                var obEnd   = ob.StartTime + ob.Duration;
                 if (targetStart < obEnd && targetEnd > obStart)
                 {
                     clashing.Add(ob);
@@ -180,36 +187,38 @@ namespace TrainerBookingSystem.Web.Pages
 
             if (shouldOverride && clashing.Any())
             {
-                foreach (var cb in clashing) cb.IsConfirmed = false; // soft-cancel clashes
+                foreach (var cb in clashing)
+                {
+                    cb.Status    = BookingStatus.Cancelled; // soft-cancel clashes
+                    cb.UpdatedAt = DateTime.UtcNow;
+                }
             }
 
-            booking.Date = targetDate;
-            booking.StartTime = targetStart;
+            booking.Date       = targetDate;
+            booking.StartTime  = targetStart;
+            booking.UpdatedAt  = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
             return RedirectToPage("/Details", new { id = Id });
-
-            
         }
 
-        public async Task<IActionResult> OnPostCloseModalsAsync()
-        {
-            return await OnGetAsync();
-        }
+        public async Task<IActionResult> OnPostCloseModalsAsync() => await OnGetAsync();
 
         private async Task LoadClientAndLists()
         {
             Client = await _db.Clients.FindAsync(Id);
             if (Client is null) return;
 
-            var now = DateTime.Now;
-            var today = DateTime.Today;
-            var startOfWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
+            var now          = DateTime.Now;
+            var today        = DateTime.Today;
+            var startOfWeek  = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
             var startOfMonth = new DateTime(today.Year, today.Month, 1);
 
-            // Upcoming (next 10)
+            // Upcoming (next 10 scheduled)
             var upcomingRaw = await _db.Bookings
-                .Where(b => b.ClientId == Id && b.IsConfirmed && b.Date >= today)
+                .Where(b => b.ClientId == Id
+                            && b.Status == BookingStatus.Scheduled
+                            && b.Date >= today)
                 .Include(b => b.Client)
                 .Take(100)
                 .ToListAsync();
@@ -219,11 +228,13 @@ namespace TrainerBookingSystem.Web.Pages
                 .Take(10)
                 .ToList();
 
-            // Recent (last 10)
+            // Recent (last 10 before today, excluding cancelled)
             var recentRaw = await _db.Bookings
-                .Where(b => b.ClientId == Id && b.IsConfirmed && b.Date < today)
+                .Where(b => b.ClientId == Id
+                            && b.Date < today
+                            && b.Status != BookingStatus.Cancelled)
                 .Include(b => b.Client)
-                .Take(100)
+                .Take(200)
                 .ToListAsync();
 
             Recent = recentRaw
@@ -231,14 +242,16 @@ namespace TrainerBookingSystem.Web.Pages
                 .Take(10)
                 .ToList();
 
-            // (Optional)
+            // Counts (scheduled only)
             WeekCount = await _db.Bookings.CountAsync(b =>
-                b.ClientId == Id && b.IsConfirmed &&
-                b.Date >= startOfWeek && b.Date < startOfWeek.AddDays(7));
+                b.ClientId == Id
+                && b.Status == BookingStatus.Scheduled
+                && b.Date >= startOfWeek && b.Date < startOfWeek.AddDays(7));
 
             MonthCount = await _db.Bookings.CountAsync(b =>
-                b.ClientId == Id && b.IsConfirmed &&
-                b.Date >= startOfMonth && b.Date < startOfMonth.AddMonths(1));
+                b.ClientId == Id
+                && b.Status == BookingStatus.Scheduled
+                && b.Date >= startOfMonth && b.Date < startOfMonth.AddMonths(1));
 
             // Preferred times → chips
             if (!string.IsNullOrWhiteSpace(Client.PreferredTimes))
@@ -248,19 +261,22 @@ namespace TrainerBookingSystem.Web.Pages
                     .ToList();
             }
 
-            // ✅ Next 2 weeks (drives the chips + mini table)
+            // Next 2 weeks (scheduled only)
             var fortnightStart = today;
             var fortnightEnd   = today.AddDays(14);
 
             Next2WeeksBookings = await _db.Bookings
-                .Where(b => b.ClientId == Id && b.IsConfirmed &&
-                            b.Date >= fortnightStart && b.Date < fortnightEnd)
+                .Where(b => b.ClientId == Id
+                            && b.Status == BookingStatus.Scheduled
+                            && b.Date >= fortnightStart && b.Date < fortnightEnd)
                 .Include(b => b.Client)
                 .ToListAsync();
 
-            // ✅ Next session (for a single “Next session” chip in Overview)
+            // Next session (earliest scheduled in the future)
             var nextCandidates = await _db.Bookings
-                .Where(b => b.ClientId == Id && b.IsConfirmed && b.Date >= today)
+                .Where(b => b.ClientId == Id
+                            && b.Status == BookingStatus.Scheduled
+                            && b.Date >= today)
                 .ToListAsync();
 
             NextSessionStart = nextCandidates
@@ -268,8 +284,10 @@ namespace TrainerBookingSystem.Web.Pages
                 .Where(dt => dt >= now)
                 .OrderBy(dt => dt)
                 .Cast<DateTime?>()
-                .FirstOrDefault();  
-        }
+                .FirstOrDefault();
 
+            // Update top chips flag
+            Next2Weeks = GetNext2WeeksStatus(Id);
+        }
     }
 }
