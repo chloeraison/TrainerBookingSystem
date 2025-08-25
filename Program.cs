@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using TrainerBookingSystem.Web.Data;
+using TrainerBookingSystem.Web.Data; // AppDbContext + DummyData live here
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,11 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 var dataDir = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
 Directory.CreateDirectory(dataDir);
 var dbFile = Path.Combine(dataDir, "trainerbooking.db");
-var sqlite = $"Data Source={dbFile}";
+var connectionString = $"Data Source={dbFile}";
 
 // Services
 builder.Services.AddRazorPages();
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(sqlite));
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(connectionString));
 
 // (nice to have) show EF SQL in Dev
 if (builder.Environment.IsDevelopment())
@@ -24,16 +24,11 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<Data.AppDbContext>();
-    db.Database.Migrate(); // creates trainerbooking.db and applies all migrations
-}
-
 // -------- Create/upgrade DB, then seed if empty --------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
     try
     {
         db.Database.Migrate(); // apply migrations (creates file if missing)
@@ -42,14 +37,17 @@ using (var scope = app.Services.CreateScope())
         if (!db.Clients.Any() && !db.Bookings.Any())
         {
             DummyData.Seed(db);
-            Console.WriteLine("Seeded sample data.");
+            app.Logger.LogInformation("Seeded sample data.");
         }
 
-        Console.WriteLine($"DB ready → Clients={db.Clients.Count()}  Bookings={db.Bookings.Count()}  Path={dbFile}");
+        app.Logger.LogInformation(
+            "DB ready → Clients={Clients}  Bookings={Bookings}  Path={Path}",
+            db.Clients.Count(), db.Bookings.Count(), dbFile
+        );
     }
     catch (Exception ex)
     {
-        Console.WriteLine("DB migrate/seed failed: " + ex);
+        app.Logger.LogError(ex, "DB migrate/seed failed");
     }
 }
 
@@ -67,7 +65,9 @@ else
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+
 // (no auth yet)
 app.MapRazorPages();
+// app.MapControllers(); // uncomment later when adding the WhatsApp webhook
 
 app.Run();
