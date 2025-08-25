@@ -37,31 +37,30 @@ var app = builder.Build();
 app.Logger.LogInformation("Using SQLite DB at: {Path}", dbFile);
 
 // -------- Create/upgrade DB, then seed if empty --------
-// -------- Create/upgrade DB, then seed if empty --------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     try
     {
-        // 1) Log the exact DB path used (shows in Log Stream)
+        // 1) Log the physical file (shows in App Service > Log stream)
         app.Logger.LogInformation("Using SQLite DB at: {Path}", db.Database.GetDbConnection().DataSource);
 
-        // 2) Try to apply EF migrations (uses Migrations folder)
+        // 2) Try to apply EF migrations (normal path)
         db.Database.Migrate();
 
-        // 3) Safety net: if the Bookings table still doesn't exist (e.g., empty file),
-        //    create the schema from the current model so you can boot.
-        //    This should be a one-time bootstrap.
-        var tableCheck = db.Database.ExecuteSqlRaw(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'Bookings'");
-        if (tableCheck == 0)
+        // 3) Safety net: if no migrations are applied AND no pending migrations were found,
+        //    the DB file may be brand new with an empty schema assembly (or trimmed on publish).
+        //    EnsureCreated() builds the schema from the current model so the app can boot.
+        var anyApplied   = db.Database.GetAppliedMigrations().Any();
+        var anyPending   = db.Database.GetPendingMigrations().Any();
+        if (!anyApplied && !anyPending)
         {
-            app.Logger.LogWarning("Bookings table missing after Migrate(); calling EnsureCreated() to bootstrap schema.");
+            app.Logger.LogWarning("No migrations found/applied. Calling EnsureCreated() to bootstrap schema.");
             db.Database.EnsureCreated();
         }
 
-        // 4) Seed only if empty
+        // 4) Seed when empty
         if (!db.Clients.Any() && !db.Bookings.Any())
         {
             DummyData.Seed(db);
