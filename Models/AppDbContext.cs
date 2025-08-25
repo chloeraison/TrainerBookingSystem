@@ -7,7 +7,7 @@ namespace TrainerBookingSystem.Web.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<Client>  Clients  => Set<Client>();
+        public DbSet<Client> Clients => Set<Client>();
         public DbSet<Booking> Bookings => Set<Booking>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -37,31 +37,46 @@ var app = builder.Build();
 app.Logger.LogInformation("Using SQLite DB at: {Path}", dbFile);
 
 // -------- Create/upgrade DB, then seed if empty --------
+// -------- Create/upgrade DB, then seed if empty --------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     try
     {
-        db.Database.Migrate(); // apply migrations (creates file if missing)
+        // 1) Log the exact DB path used (shows in Log Stream)
+        app.Logger.LogInformation("Using SQLite DB at: {Path}", db.Database.GetDbConnection().DataSource);
 
-        // Seed once (only when both tables empty)
+        // 2) Try to apply EF migrations (uses Migrations folder)
+        db.Database.Migrate();
+
+        // 3) Safety net: if the Bookings table still doesn't exist (e.g., empty file),
+        //    create the schema from the current model so you can boot.
+        //    This should be a one-time bootstrap.
+        var tableCheck = db.Database.ExecuteSqlRaw(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'Bookings'");
+        if (tableCheck == 0)
+        {
+            app.Logger.LogWarning("Bookings table missing after Migrate(); calling EnsureCreated() to bootstrap schema.");
+            db.Database.EnsureCreated();
+        }
+
+        // 4) Seed only if empty
         if (!db.Clients.Any() && !db.Bookings.Any())
         {
             DummyData.Seed(db);
             app.Logger.LogInformation("Seeded sample data.");
         }
 
-        app.Logger.LogInformation(
-            "DB ready → Clients={Clients}  Bookings={Bookings}  Path={Path}",
-            db.Clients.Count(), db.Bookings.Count(), dbFile
-        );
+        app.Logger.LogInformation("DB ready → Clients={Clients}  Bookings={Bookings}",
+            db.Clients.Count(), db.Bookings.Count());
     }
     catch (Exception ex)
     {
         app.Logger.LogError(ex, "DB migrate/seed failed");
     }
 }
+
 
 // -------- Middleware pipeline --------
 if (app.Environment.IsDevelopment())
