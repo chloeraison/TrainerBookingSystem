@@ -4,24 +4,38 @@
     ViewData["Title"] = "Client";
 }
 
+<!-- Simple modal styles (local to this page) -->
+<style>
+  .overlay {position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:1000;}
+  .dialog  {background:#1f1f23; color:#fff; border:1px solid #333; border-radius:14px; padding:18px; width:min(640px, 92vw); box-shadow:0 10px 30px rgba(0,0,0,.5);}
+  .dialog h3 {margin:0 0 12px 0;}
+  .dialog .grid {display:grid; gap:.75rem;}
+  @@media (min-width:768px){ .dialog .grid.two {grid-template-columns:1fr 1fr;} }
+  .lbl{display:block; font-weight:600; margin-bottom:6px;}
+  .input{width:100%;}
+  .val{display:block; color:#ffb3b3; font-size:.85rem;}
+  .actions{display:flex; gap:.5rem; margin-top:12px;}
+</style>
+
 <section class="client-header">
   <a asp-page="/Clients" class="btn btn-ghost back">← Back to Clients</a>
-
   <div class="client-title-inline">
     <span class="avatar-emoji" aria-hidden="true">👤</span>
     <h1 class="client-title">@Model.Client?.Name</h1>
   </div>
 </section>
 
-<!-- === Overview FIRST === -->
+<!-- === Overview === -->
 <section class="card">
   <div class="card-head">
     <h2>🧾 Overview</h2>
-    <a class="btn-icon btn-icon-xs"
-       asp-page="/Clients/Edit"
-       asp-route-id="@Model.Client?.Id"
-       title="Edit client"
-       aria-label="Edit client">✏️</a>
+
+    <!-- Pencil opens EDIT CLIENT modal (POST to handler) -->
+    <form method="post" asp-page-handler="OpenEditClient" class="inline">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="id" value="@Model.Id" />
+      <button type="submit" class="btn-icon btn-icon-xs" title="Edit client" aria-label="Edit client">✏️</button>
+    </form>
   </div>
 
   <div class="kv">
@@ -38,56 +52,46 @@
     </div>
 
     <div>📌 Notes</div>
+    <div>@(string.IsNullOrWhiteSpace(Model.Client?.Notes) ? "—" : Model.Client!.Notes)</div>
 
     <div>🌴 Holiday</div>
     <div>@(Model.HolidayText ?? "—")</div>
   </div>
 
-  @* keep your existing mini two-week table here, unchanged *@
   @{
       var week1End = DateTime.Today.AddDays(7);
-      var allWeek1 = Model.Next2WeeksBookings
-          .Where(b => b.Date < week1End)
-          .OrderBy(b => b.Date).ThenBy(b => b.StartTime)
-          .ToList();
-
+      var allWeek1 = Model.Next2WeeksBookings.Where(b => b.Date < week1End)
+        .OrderBy(b => b.Date).ThenBy(b => b.StartTime).ToList();
       var showWeek1 = allWeek1.Take(4).ToList();
       var moreWeek1 = allWeek1.Count - showWeek1.Count;
 
-      var allWeek2 = Model.Next2WeeksBookings
-          .Where(b => b.Date >= week1End)
-          .OrderBy(b => b.Date).ThenBy(b => b.StartTime)
-          .ToList();
-
+      var allWeek2 = Model.Next2WeeksBookings.Where(b => b.Date >= week1End)
+        .OrderBy(b => b.Date).ThenBy(b => b.StartTime).ToList();
       var showWeek2 = allWeek2.Take(4).ToList();
       var moreWeek2 = allWeek2.Count - showWeek2.Count;
   }
 
   <div class="grid grid-cols-2 gap-3 mt-2">
-    <!-- This week -->
     <div>
       <div class="text-sm font-medium opacity-80 mb-1">This week</div>
       <div class="flex flex-wrap gap-2">
-        @if (!showWeek1.Any()) {
-          <span class="chip chip-red">❌ No sessions</span>
-        } else {
+        @if (!showWeek1.Any()) { <span class="chip chip-red">❌ No sessions</span> }
+        else {
           foreach (var b in showWeek1) {
-            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime.ToString(@"hh\:mm")</span>
+            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime:hh\\:mm</span>
           }
           if (moreWeek1 > 0) { <span class="chip chip-blue">+@moreWeek1 more</span> }
         }
       </div>
     </div>
 
-    <!-- Next week -->
     <div>
       <div class="text-sm font-medium opacity-80 mb-1">Next week</div>
       <div class="flex flex-wrap gap-2">
-        @if (!showWeek2.Any()) {
-          <span class="chip chip-red">❌ No sessions</span>
-        } else {
+        @if (!showWeek2.Any()) { <span class="chip chip-red">❌ No sessions</span> }
+        else {
           foreach (var b in showWeek2) {
-            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime.ToString(@"hh\:mm")</span>
+            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime:hh\\:mm</span>
           }
           if (moreWeek2 > 0) { <span class="chip chip-blue">+@moreWeek2 more</span> }
         }
@@ -96,212 +100,278 @@
   </div>
 </section>
 
-
-
+<!-- === Sessions === -->
 <section class="card">
-    <div class="card-head">
-        <h2>🎯 Sessions</h2>
+  <div class="card-head">
+    <h2>🎯 Sessions</h2>
 
-        @* primary CTA in-context *@
-        @if (Model.Client!.SessionsLeft > 0)
-        {
-        <a class="btn btn-accent btn-sm"
-            asp-page="/Bookings/Create"
-            asp-route-clientId="@Model.Client?.Id"
-            aria-label="Create a new booking for this client">
-            ＋ New booking
-        </a>
-        }
-        else
-        {
-        <a class="btn btn-sm"
-            asp-page="/Clients/Edit"
-            asp-route-id="@Model.Client?.Id"
-            title="No sessions left — top up">
-            Add sessions
-        </a>
-        }
+    @if (Model.Client!.SessionsLeft > 0)
+    {
+      <!-- NEW BOOKING opens modal -->
+      <form method="post" asp-page-handler="OpenNewBooking" class="inline">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <button class="btn btn-accent btn-sm" aria-label="Create a new booking for this client">＋ New booking</button>
+      </form>
+    }
+    else
+    {
+      <a class="btn btn-sm" asp-page="/Clients/Edit" asp-route-id="@Model.Client?.Id" title="No sessions left — top up">Add sessions</a>
+    }
+  </div>
+
+  <div class="session-boxes">
+    <form method="post" asp-page-handler="AdjustCounter" class="counter-box">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="id" value="@Model.Id" />
+      <input type="hidden" name="target" value="left" />
+      <button class="btn-circle btn-circle-left" name="delta" value="-1" aria-label="decrease left">−</button>
+      <div class="counter-title">Left</div>
+      <div class="counter-value">@Model.Client!.SessionsLeft</div>
+      <button class="btn-circle btn-circle-right" name="delta" value="1" aria-label="increase left">+</button>
+    </form>
+
+    <form method="post" asp-page-handler="AdjustCounter" class="counter-box">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="id" value="@Model.Id" />
+      <input type="hidden" name="target" value="completed" />
+      <button class="btn-circle btn-circle-left" name="delta" value="-1" aria-label="decrease completed">−</button>
+      <div class="counter-title">Completed</div>
+      <div class="counter-value">@Model.Client!.SessionsCompleted</div>
+      <button class="btn-circle btn-circle-right" name="delta" value="1" aria-label="increase completed">+</button>
+    </form>
+  </div>
+
+  <div class="session-totals">
+    <div class="stat">
+      <div class="stat-num">@Model.WeekCount</div>
+      <div class="stat-label">Sessions this week</div>
     </div>
-
-    <div class="session-boxes">
-        <!-- Left -->
-        <form method="post" asp-page-handler="AdjustCounter" class="counter-box">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="id" value="@Model.Id" />
-            <input type="hidden" name="target" value="left" />
-
-            <button class="btn-circle btn-circle-left" name="delta" value="-1" aria-label="decrease left">−</button>
-            <div class="counter-title">Left</div>
-            <div class="counter-value">@Model.Client!.SessionsLeft</div>
-            <button class="btn-circle btn-circle-right" name="delta" value="1" aria-label="increase left">+</button>
-        </form>
-
-        <!-- Completed -->
-        <form method="post" asp-page-handler="AdjustCounter" class="counter-box">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="id" value="@Model.Id" />
-            <input type="hidden" name="target" value="completed" />
-
-            <button class="btn-circle btn-circle-left" name="delta" value="-1" aria-label="decrease completed">−</button>
-            <div class="counter-title">Completed</div>
-            <div class="counter-value">@Model.Client!.SessionsCompleted</div>
-            <button class="btn-circle btn-circle-right" name="delta" value="1" aria-label="increase completed">+</button>
-        </form>
-        </div>
-
-    <!-- week / month totals under the counters -->
-    <div class="session-totals">
-        <div class="stat">
-            <div class="stat-num">@Model.WeekCount</div>
-            <div class="stat-label">Sessions this week</div>
-        </div>
-        <div class="stat">
-            <div class="stat-num">@Model.MonthCount</div>
-            <div class="stat-label">Sessions this month</div>
-        </div>
+    <div class="stat">
+      <div class="stat-num">@Model.MonthCount</div>
+      <div class="stat-label">Sessions this month</div>
     </div>
+  </div>
 </section>
 
-    <section class="card span-2">
-        <h2>📅 Upcoming</h2>
-        @if (!Model.Upcoming.Any())
-        {
-            <p class="muted">No upcoming bookings.</p>
-        }
-        else
-        {
-            <ul class="booking-list">
-                @foreach (var b in Model.Upcoming)
-                {
-                    <li class="booking-item">
-                        <div class="b-time">
-                            @b.Date.ToString("ddd dd MMM") · @b.StartTime.ToString(@"hh\:mm")
-                        </div>
-                        <div class="b-type">
-                            @($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")
-                        </div>
-                        <div class="b-actions">
-                            <!-- View modal -->
-                            <form method="post" asp-page-handler="ViewBooking">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@Model.Id" />
-                                <input type="hidden" name="bookingId" value="@b.Id" />
-                                <button type="submit" class="btn btn-sm btn-ghost">🔍 View</button>
-                            </form>
+<!-- === Upcoming === -->
+<section class="card span-2">
+  <h2>📅 Upcoming</h2>
+  @if (!Model.Upcoming.Any())
+  {
+    <p class="muted">No upcoming bookings.</p>
+  }
+  else
+  {
+    <ul class="booking-list">
+      @foreach (var b in Model.Upcoming)
+      {
+        <li class="booking-item">
+          <div class="b-time">@b.Date.ToString("ddd dd MMM") · @b.StartTime:hh\\:mm</div>
+          <div class="b-type">@($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")</div>
+          <div class="b-actions">
+            <form method="post" asp-page-handler="ViewBooking">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="id" value="@Model.Id" />
+              <input type="hidden" name="bookingId" value="@b.Id" />
+              <button type="submit" class="btn btn-sm btn-ghost">🔍 View</button>
+            </form>
+            <form method="post" asp-page-handler="OpenEdit">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="id" value="@Model.Id" />
+              <input type="hidden" name="bookingId" value="@b.Id" />
+              <button type="submit" class="btn btn-sm">✏️ Edit</button>
+            </form>
+            <form method="post" asp-page-handler="MarkCompleted">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="id" value="@Model.Id" />
+              <input type="hidden" name="bookingId" value="@b.Id" />
+              <button type="submit" class="btn btn-sm btn-ghost">✅ Completed</button>
+            </form>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>
 
-                            <!-- Reschedule (opens edit modal) -->
-                            <form method="post" asp-page-handler="OpenEdit">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@Model.Id" />
-                                <input type="hidden" name="bookingId" value="@b.Id" />
-                                <button type="submit" class="btn btn-sm">✏️ Edit</button>
-                            </form>
-
-                            <!-- Mark completed -->
-                            <form method="post" asp-page-handler="MarkCompleted">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@Model.Id" />
-                                <input type="hidden" name="bookingId" value="@b.Id" />
-                                <button type="submit" class="btn btn-sm btn-ghost">✅ Completed</button>
-                            </form>
-                        </div>
-                    </li>
-                }
-            </ul>
-        }
-    </section>
-
-    <section class="card span-2">
-        <h2>🗂️ Recent (last 10)</h2>
-        @if (!Model.Recent.Any())
-        {
-            <p class="muted">No recent history.</p>
-        }
-        else
-        {
-            <ul class="booking-list compact">
-                @foreach (var b in Model.Recent)
-                {
-                    <li class="booking-item">
-                        <div class="b-time">
-                            @b.Date.ToString("ddd dd MMM") · @b.StartTime.ToString(@"hh\:mm")
-                        </div>
-                        <div class="b-type">
-                            @($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")
-                        </div>
-                        <div class="b-actions">
-                            <form method="post" asp-page-handler="ViewBooking">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@Model.Id" />
-                                <input type="hidden" name="bookingId" value="@b.Id" />
-                                <button type="submit" class="btn btn-sm btn-ghost">🔍 View</button>
-                            </form>
-                        </div>
-                    </li>
-                }
-            </ul>
-        }
-    </section>
-</div>
+<!-- === Recent === -->
+<section class="card span-2">
+  <h2>🗂️ Recent (last 10)</h2>
+  @if (!Model.Recent.Any())
+  {
+    <p class="muted">No recent history.</p>
+  }
+  else
+  {
+    <ul class="booking-list compact">
+      @foreach (var b in Model.Recent)
+      {
+        <li class="booking-item">
+          <div class="b-time">@b.Date.ToString("ddd dd MMM") · @b.StartTime:hh\\:mm</div>
+          <div class="b-type">@($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")</div>
+          <div class="b-actions">
+            <form method="post" asp-page-handler="ViewBooking">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="id" value="@Model.Id" />
+              <input type="hidden" name="bookingId" value="@b.Id" />
+              <button type="submit" class="btn btn-sm btn-ghost">🔍 View</button>
+            </form>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>
 
 <!-- ===== View modal ===== -->
 @if (Model.ShowViewModal && Model.ViewBooking != null)
 {
-    var vb = Model.ViewBooking;
-    <div class="app-modal-backdrop show">
-        <div class="app-modal" role="dialog" aria-modal="true" aria-label="Booking details">
-            <h3>Booking details</h3>
-            <p><strong>Client:</strong> @vb.Client?.Name</p>
-            <p><strong>When:</strong> @((vb.Date + vb.StartTime).ToString("ddd dd MMM · HH:mm"))</p>
-            <p><strong>Type:</strong> @vb.SessionType</p>
-            <p><strong>Duration:</strong> @(vb.Duration.TotalMinutes) mins</p>
-
-            <form method="post" asp-page-handler="CloseModals">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" value="@Model.Id" />
-                <button class="btn">Close</button>
-            </form>
-        </div>
+  var vb = Model.ViewBooking;
+  <div class="overlay">
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="Booking details">
+      <h3>Booking details</h3>
+      <p><strong>Client:</strong> @vb.Client?.Name</p>
+      <p><strong>When:</strong> @((vb.Date + vb.StartTime).ToString("ddd dd MMM · HH:mm"))</p>
+      <p><strong>Type:</strong> @vb.SessionType</p>
+      <p><strong>Duration:</strong> @(vb.Duration.TotalMinutes) mins</p>
+      <form method="post" asp-page-handler="CloseModals" class="actions">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <button class="btn">Close</button>
+      </form>
     </div>
+  </div>
 }
 
-<!-- ===== Edit (reschedule) modal ===== -->
+<!-- ===== Reschedule modal ===== -->
 @if (Model.ShowEditModal)
 {
-    <div class="app-modal-backdrop show">
-        <div class="app-modal" role="dialog" aria-modal="true" aria-label="Reschedule booking">
-            <h3>Reschedule booking</h3>
-            <form method="post" asp-page-handler="Reschedule">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" asp-for="EditBookingId" />
-
-                <label class="block" style="margin-bottom:6px;">New date & time</label>
-                <input class="input" type="datetime-local" asp-for="NewStartLocal" />
-
-                @if (Model.Conflicts.Any())
-                {
-                    <div class="card" style="margin-top:12px;border:1px solid #b30000;background:#2b0c0c;color:#ffdede;">
-                        <div style="font-weight:800;margin-bottom:6px;">Conflicts</div>
-                        <ul style="margin:0 0 8px 18px;">
-                            @foreach (var c in Model.Conflicts) { <li>@c</li> }
-                        </ul>
-                        <div style="display:flex;gap:8px;">
-                            <button class="btn btn-secondary" type="submit" name="override" value="false">Back</button>
-                            <button class="btn" type="submit" name="override" value="true">Override & cancel conflicts</button>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <div style="display:flex;gap:8px;margin-top:12px;">
-                        <button class="btn" type="submit" name="override" value="false">Check & Apply</button>
-                        <button class="btn btn-secondary" type="submit" formaction="?handler=CloseModals" formmethod="post">Cancel</button>
-                    </div>
-                }
-            </form>
-        </div>
+  <div class="overlay">
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="Reschedule booking">
+      <h3>Reschedule booking</h3>
+      <form method="post" asp-page-handler="Reschedule">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <input type="hidden" asp-for="EditBookingId" />
+        <label class="lbl">New date & time</label>
+        <input class="input" type="datetime-local" asp-for="NewStartLocal" />
+        @if (Model.Conflicts.Any())
+        {
+          <div class="card" style="margin-top:12px;border:1px solid #b30000;background:#2b0c0c;color:#ffdede;">
+            <div style="font-weight:800;margin-bottom:6px;">Conflicts</div>
+            <ul style="margin:0 0 8px 18px;">
+              @foreach (var c in Model.Conflicts) { <li>@c</li> }
+            </ul>
+            <div class="actions">
+              <button class="btn btn-secondary" type="submit" name="override" value="false">Back</button>
+              <button class="btn" type="submit" name="override" value="true">Override & cancel conflicts</button>
+            </div>
+          </div>
+        }
+        else
+        {
+          <div class="actions">
+            <button class="btn" type="submit" name="override" value="false">Check & Apply</button>
+            <button class="btn btn-secondary" type="submit" formaction="?handler=CloseModals" formmethod="post">Cancel</button>
+          </div>
+        }
+      </form>
     </div>
+  </div>
 }
 
-<script src="~/js/clients-modals.js"></script>
+<!-- ===== EDIT CLIENT modal ===== -->
+@if (Model.ShowEditClient)
+{
+  <div class="overlay">
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="Edit client">
+      <h3>Edit client</h3>
+      <form method="post" asp-page-handler="UpdateClient">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <div class="grid two">
+          <div>
+            <label class="lbl">Phone</label>
+            <input asp-for="EditClient.Phone" class="input" />
+            <span asp-validation-for="EditClient.Phone" class="val"></span>
+          </div>
+          <div>
+            <label class="lbl">Email</label>
+            <input asp-for="EditClient.Email" class="input" />
+            <span asp-validation-for="EditClient.Email" class="val"></span>
+          </div>
+          <div>
+            <label class="lbl">Gym</label>
+            <input asp-for="EditClient.Gym" class="input" />
+          </div>
+          <div>
+            <label class="lbl">Preferred time</label>
+            <select asp-for="EditClient.PreferredTime" class="input">
+              <option value="">—</option>
+              <option>Morning</option>
+              <option>Afternoon</option>
+              <option>Evening</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1">
+            <label class="lbl">Notes</label>
+            <textarea asp-for="EditClient.Notes" class="input" rows="3"></textarea>
+          </div>
+          <div style="grid-column:1/-1; display:flex; gap:.5rem; align-items:center;">
+            <input type="checkbox" asp-for="EditClient.OnHoliday" id="EditClient_OnHoliday" />
+            <label for="EditClient_OnHoliday">On holiday</label>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn">Save</button>
+          <button formaction="?handler=CloseModals" formmethod="post" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ===== NEW BOOKING modal ===== -->
+@if (Model.ShowNewBooking)
+{
+  <div class="overlay">
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="New booking">
+      <h3>New booking</h3>
+      <form method="post" asp-page-handler="CreateBooking">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <div class="grid two">
+          <div>
+            <label class="lbl">Date</label>
+            <input asp-for="NewBooking.Date" type="date" class="input" />
+            <span asp-validation-for="NewBooking.Date" class="val"></span>
+          </div>
+          <div>
+            <label class="lbl">Start time</label>
+            <input asp-for="NewBooking.StartTime" type="time" class="input" />
+            <span asp-validation-for="NewBooking.StartTime" class="val"></span>
+          </div>
+          <div>
+            <label class="lbl">Duration (mins)</label>
+            <input asp-for="NewBooking.DurationMinutes" type="number" min="15" max="240" step="15" class="input" />
+            <span asp-validation-for="NewBooking.DurationMinutes" class="val"></span>
+          </div>
+          <div>
+            <label class="lbl">Type</label>
+            <input asp-for="NewBooking.SessionType" class="input" />
+            <span asp-validation-for="NewBooking.SessionType" class="val"></span>
+          </div>
+          <div style="grid-column:1/-1">
+            <label class="lbl">Gym (optional)</label>
+            <input asp-for="NewBooking.Gym" class="input" />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn">Create</button>
+          <button formaction="?handler=CloseModals" formmethod="post" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
