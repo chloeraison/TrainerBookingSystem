@@ -42,7 +42,7 @@ namespace TrainerBookingSystem.Web.Pages
 
         public int WeekCount { get; private set; }
         public int MonthCount { get; private set; }
-        public List<string> PreferredTimeChips { get; private set; } = new();
+        public List<string> PreferredTimesChips { get; private set; } = new();
         public string? HolidayText { get; private set; }
 
         [BindProperty] public int EditBookingId { get; set; }
@@ -253,12 +253,11 @@ namespace TrainerBookingSystem.Web.Pages
                 && b.Status == BookingStatus.Scheduled
                 && b.Date >= startOfMonth && b.Date < startOfMonth.AddMonths(1));
 
-            // Preferred times → chips
-            if (!string.IsNullOrWhiteSpace(Client.PreferredTimes))
+            // Preferred time → chip (singular source now)
+            PreferredTimesChips.Clear();
+            if (!string.IsNullOrWhiteSpace(Client.PreferredTime))
             {
-                PreferredTimeChips = Client.PreferredTimes
-                    .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                    .ToList();
+                PreferredTimesChips.Add(Client.PreferredTime);
             }
 
             // Next 2 weeks (scheduled only)

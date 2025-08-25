@@ -1,0 +1,58 @@
+@page
+@model TrainerBookingSystem.Web.Pages.Clients.NewModel
+@{
+    ViewData["Title"] = "Add Client";
+}
+<h1 class="mb-3">Add Client</h1>
+
+<form method="post" class="card p-3">
+    <div class="mb-3">
+        <label asp-for="Input.Name" class="form-label"></label>
+        <input asp-for="Input.Name" class="form-control" />
+        <span asp-validation-for="Input.Name" class="text-danger"></span>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="Input.Phone" class="form-label"></label>
+            <input asp-for="Input.Phone" class="form-control" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="Input.Email" class="form-label"></label>
+            <input asp-for="Input.Email" class="form-control" />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="Input.Gym" class="form-label"></label>
+            <input asp-for="Input.Gym" class="form-control" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="Input.PreferredTime" class="form-label">Preferred time</label>
+            <select asp-for="Input.PreferredTime" class="form-select">
+                <option value="">—</option>
+                <option>Morning</option>
+                <option>Afternoon</option>
+                <option>Evening</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Notes" class="form-label"></label>
+        <textarea asp-for="Input.Notes" rows="3" class="form-control"></textarea>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="Input.OnHoliday" class="form-check-input" />
+        <label asp-for="Input.OnHoliday" class="form-check-label"></label>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-page="/Clients" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

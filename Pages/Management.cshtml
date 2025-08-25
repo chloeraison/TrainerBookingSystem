@@ -1,4 +1,5 @@
 @page
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @model TrainerBookingSystem.Web.Pages.ManagementModel
 @{
     ViewData["Title"] = "Management";
@@ -34,7 +35,9 @@
     <section class="card">
         <h2>⚡ Quick Actions</h2>
         <div class="quick-actions">
-            <a class="btn btn-accent" asp-page="/Clients/Create">＋ Add Client</a>
+            <a class="btn btn-danger" asp-page="/Clients/New">
+                <span class="me-1">+</span> Add Client
+            </a>
             <a class="btn" asp-page="/Calendar">📅 View Calendar</a>
             <a class="btn btn-ghost" href="#">⬇ Export Data</a>
         </div>

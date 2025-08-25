@@ -30,15 +30,14 @@
 
     <div>🕒 Pref. time</div>
     <div>
-      @if (Model.PreferredTimeChips.Any())
+      @if (Model.PreferredTimesChips.Any())
       {
-        foreach (var chip in Model.PreferredTimeChips) { <span class="chip">@chip</span> }
+        foreach (var chip in Model.PreferredTimesChips) { <span class="chip">@chip</span> }
       }
       else { <span class="muted">—</span> }
     </div>
 
     <div>📌 Notes</div>
-    <div>@(string.IsNullOrWhiteSpace(Model.Client?.Flags) ? "—" : Model.Client!.Flags)</div>
 
     <div>🌴 Holiday</div>
     <div>@(Model.HolidayText ?? "—")</div>

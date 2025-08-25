@@ -1,0 +1,2 @@
+Boot at 2025-08-25T21:12:40.6055864Z
+DB=C:\Users\cadmi\TrainerBookingSystem\TrainerBookingSystem\App_Data\trainerbooking.db

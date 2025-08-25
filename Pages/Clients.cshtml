@@ -17,9 +17,9 @@
     <tbody>
     @foreach (var c in Model.Clients)
     {
-        var pref = string.IsNullOrWhiteSpace(c.PreferredTimes)
+        var pref = string.IsNullOrWhiteSpace(c.PreferredTime)
             ? null
-            : c.PreferredTimes.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            : c.PreferredTime.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
                               .FirstOrDefault();
 
         var total = (c.SessionsLeft + c.SessionsCompleted);
