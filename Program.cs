@@ -3,10 +3,21 @@ using TrainerBookingSystem.Web.Data; // AppDbContext + DummyData live here
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -------- Storage: SQLite file under App_Data --------
-var dataDir = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
-Directory.CreateDirectory(dataDir);
-var dbFile = Path.Combine(dataDir, "trainerbooking.db");
+// -------- Storage: SQLite file (Azure-safe path) --------
+string dbFile;
+var home = Environment.GetEnvironmentVariable("HOME"); // present on Azure
+if (!string.IsNullOrEmpty(home))
+{
+    var homeData = Path.Combine(home, "data");
+    Directory.CreateDirectory(homeData);
+    dbFile = Path.Combine(homeData, "trainerbooking.db");  // -> /home/data/trainerbooking.db
+}
+else
+{
+    var dataDir = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
+    Directory.CreateDirectory(dataDir);
+    dbFile = Path.Combine(dataDir, "trainerbooking.db");
+}
 var connectionString = $"Data Source={dbFile}";
 
 // Services
@@ -23,6 +34,7 @@ if (builder.Environment.IsDevelopment())
 }
 
 var app = builder.Build();
+app.Logger.LogInformation("Using SQLite DB at: {Path}", dbFile);
 
 // -------- Create/upgrade DB, then seed if empty --------
 using (var scope = app.Services.CreateScope())
