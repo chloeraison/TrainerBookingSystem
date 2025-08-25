@@ -24,6 +24,12 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<Data.AppDbContext>();
+    db.Database.Migrate(); // creates trainerbooking.db and applies all migrations
+}
+
 // -------- Create/upgrade DB, then seed if empty --------
 using (var scope = app.Services.CreateScope())
 {
