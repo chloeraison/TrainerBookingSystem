@@ -43,31 +43,41 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        // 1) Log the physical file (shows in App Service > Log stream)
-        app.Logger.LogInformation("Using SQLite DB at: {Path}", db.Database.GetDbConnection().DataSource);
+        // Log the exact file path & write a breadcrumb file next to the DB
+        var dbPath = db.Database.GetDbConnection().DataSource ?? "(unknown)";
+        app.Logger.LogWarning(">>> Using SQLite DB at: {Path}", dbPath);
 
-        // 2) Try to apply EF migrations (normal path)
+        try
+        {
+            var marker = Path.Combine(Path.GetDirectoryName(dbPath) ?? ".", "BOOT.txt");
+            File.WriteAllText(marker, $"Boot at {DateTime.UtcNow:o}\nDB={dbPath}\n");
+        }
+        catch { /* ignore file write errors */ }
+
+        // Force-create schema for brand-new/empty files
+        db.Database.EnsureCreated();
+
+        // Then attempt to run migrations (if any exist in the assembly)
         db.Database.Migrate();
 
-        // 3) Safety net: if no migrations are applied AND no pending migrations were found,
-        //    the DB file may be brand new with an empty schema assembly (or trimmed on publish).
-        //    EnsureCreated() builds the schema from the current model so the app can boot.
-        var anyApplied   = db.Database.GetAppliedMigrations().Any();
-        var anyPending   = db.Database.GetPendingMigrations().Any();
-        if (!anyApplied && !anyPending)
+        // Sanity check: does Bookings exist?
+        var bookingsExists = db.Database
+            .ExecuteSqlRaw("SELECT 1 FROM sqlite_master WHERE type='table' AND name='Bookings'");
+
+        if (bookingsExists == 0)
         {
-            app.Logger.LogWarning("No migrations found/applied. Calling EnsureCreated() to bootstrap schema.");
-            db.Database.EnsureCreated();
+            app.Logger.LogError("!!! Bookings table still missing after EnsureCreated/Migrate. " +
+                                "Model/migrations mismatch or wrong DB path.");
         }
 
-        // 4) Seed when empty
+        // Seed only if empty
         if (!db.Clients.Any() && !db.Bookings.Any())
         {
             DummyData.Seed(db);
-            app.Logger.LogInformation("Seeded sample data.");
+            app.Logger.LogWarning(">>> Seeded sample data.");
         }
 
-        app.Logger.LogInformation("DB ready → Clients={Clients}  Bookings={Bookings}",
+        app.Logger.LogWarning(">>> DB ready: Clients={Clients} Bookings={Bookings}",
             db.Clients.Count(), db.Bookings.Count());
     }
     catch (Exception ex)
@@ -75,6 +85,7 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogError(ex, "DB migrate/seed failed");
     }
 }
+
 
 
 // -------- Middleware pipeline --------

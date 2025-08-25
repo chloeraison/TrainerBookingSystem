@@ -18,4 +18,9 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Remove="App_Data\*.db" />
+    <None Remove="App_Data\*.db" />
+  </ItemGroup>
+
 </Project>

@@ -9,6 +9,7 @@
 
 # Database file
 *.db
+App_Data/*.db
 
 # Logs
 *.log
@@ -18,3 +19,5 @@ Migrations/
 
 # Secrets
 appsettings.Development.json
+
+
