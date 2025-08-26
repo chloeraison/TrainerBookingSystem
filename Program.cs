@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using TrainerBookingSystem.Web.Data; // AppDbContext + DummyData live here
+using TrainerBookingSystem.Web.Data; // AppDbContext + DummyData
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,21 +20,22 @@ else
 }
 var connectionString = $"Data Source={dbFile}";
 
-// Services
+// -------- Services --------
 builder.Services.AddRazorPages();
+
+// Explicitly tell EF where migrations live (same assembly as AppDbContext)
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlite(
         connectionString,
-        b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName) // explicitly point to the assembly that contains your Migrations folder
+        b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)
     )
 );
 
-// (nice to have) show EF SQL in Dev
+// Dev logging for EF
 if (builder.Environment.IsDevelopment())
 {
     builder.Logging.AddConsole();
     builder.Logging.AddDebug();
-    builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
     builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
     builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Query", LogLevel.Warning);
 }
@@ -42,13 +43,14 @@ if (builder.Environment.IsDevelopment())
 var app = builder.Build();
 app.Logger.LogInformation("Using SQLite DB at: {Path}", dbFile);
 
-// -------- Apply schema, then seed if empty --------
+// -------- Apply schema (migrate or bootstrap), then seed if empty --------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     try
     {
+        // Log exact DB path + breadcrumb file
         var dbPath = db.Database.GetDbConnection().DataSource ?? "(unknown)";
         app.Logger.LogWarning(">>> Using SQLite DB at: {Path}", dbPath);
         try
@@ -58,24 +60,23 @@ using (var scope = app.Services.CreateScope())
         }
         catch { /* ignore */ }
 
-        // If EF can see migrations, use them; otherwise bootstrap the schema
+        // Prefer migrations; if not found at runtime, bootstrap schema so app can run
         var hasMigrations = db.Database.GetMigrations().Any();
-        var pending       = db.Database.GetPendingMigrations().ToList();
+        var pending = db.Database.GetPendingMigrations().ToList();
 
         if (hasMigrations)
         {
             if (pending.Any())
-                app.Logger.LogWarning("Applying {Count} pending migration(s): {Names}",
+                app.Logger.LogWarning("Applying {Count} migration(s): {Names}",
                     pending.Count, string.Join(", ", pending));
             else
                 app.Logger.LogWarning("No pending migrations.");
-
             db.Database.Migrate();
         }
         else
         {
             app.Logger.LogWarning("No migrations found at runtime. Calling EnsureCreated() to bootstrap schema.");
-            db.Database.EnsureCreated(); // creates tables from current model
+            db.Database.EnsureCreated(); // creates tables from current model for a brand-new file
         }
 
         // Seed only if empty
@@ -91,9 +92,9 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         app.Logger.LogError(ex, "DB initialise/migrate/seed failed");
+        throw; // fail fast so we see the root cause if it happens
     }
 }
-
 
 // -------- Middleware pipeline --------
 if (app.Environment.IsDevelopment())
@@ -110,8 +111,5 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// (no auth yet)
 app.MapRazorPages();
-// app.MapControllers(); // uncomment later when adding the WhatsApp webhook
-
 app.Run();

@@ -14,9 +14,6 @@ App_Data/*.db
 # Logs
 *.log
 
-# EF Core files
-Migrations/
-
 # Secrets
 appsettings.Development.json
 
