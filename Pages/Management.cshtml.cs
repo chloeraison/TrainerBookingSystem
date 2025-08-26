@@ -243,7 +243,7 @@ namespace TrainerBookingSystem.Web.Pages
         {
             if (!_wa.IsConfigured())
             {
-                TempData["Error"] = "WhatsApp isn’t configured yet ya silly monkey. Add WhatsApp:Token and WhatsApp:PhoneNumberId in appsettings/Azure.";
+                TempData["Error"] = "WhatsApp isn’t configured yet ya silly monkey 🙈. Add WhatsApp:Token and WhatsApp:PhoneNumberId in appsettings/Azure.";
                 return RedirectToPage();
             }
 
