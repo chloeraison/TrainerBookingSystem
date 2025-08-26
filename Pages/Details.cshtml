@@ -78,7 +78,7 @@
         @if (!showWeek1.Any()) { <span class="chip chip-red">❌ No sessions</span> }
         else {
           foreach (var b in showWeek1) {
-            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime:hh\\:mm</span>
+            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime</span>
           }
           if (moreWeek1 > 0) { <span class="chip chip-blue">+@moreWeek1 more</span> }
         }
