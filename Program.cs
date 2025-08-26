@@ -22,7 +22,12 @@ var connectionString = $"Data Source={dbFile}";
 
 // Services
 builder.Services.AddRazorPages();
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(connectionString));
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite(
+        connectionString,
+        b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName) // explicitly point to the assembly that contains your Migrations folder
+    )
+);
 
 // (nice to have) show EF SQL in Dev
 if (builder.Environment.IsDevelopment())
@@ -30,20 +35,20 @@ if (builder.Environment.IsDevelopment())
     builder.Logging.AddConsole();
     builder.Logging.AddDebug();
     builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
+    builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
     builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Query", LogLevel.Warning);
 }
 
 var app = builder.Build();
 app.Logger.LogInformation("Using SQLite DB at: {Path}", dbFile);
 
-// -------- Apply migrations (no EnsureCreated), then seed if empty --------
+// -------- Apply schema, then seed if empty --------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     try
     {
-        // Log exact DB path + breadcrumb file
         var dbPath = db.Database.GetDbConnection().DataSource ?? "(unknown)";
         app.Logger.LogWarning(">>> Using SQLite DB at: {Path}", dbPath);
         try
@@ -51,26 +56,26 @@ using (var scope = app.Services.CreateScope())
             var marker = Path.Combine(Path.GetDirectoryName(dbPath) ?? ".", "BOOT.txt");
             File.WriteAllText(marker, $"Boot at {DateTime.UtcNow:o}\nDB={dbPath}\n");
         }
-        catch { /* ignore file write errors */ }
+        catch { /* ignore */ }
 
-        // Show pending migrations (useful in prod logs)
-        var pending = db.Database.GetPendingMigrations().ToList();
-        if (pending.Any())
-            app.Logger.LogWarning("Applying {Count} pending migration(s): {Names}", pending.Count, string.Join(", ", pending));
-        else
-            app.Logger.LogWarning("No pending migrations.");
+        // If EF can see migrations, use them; otherwise bootstrap the schema
+        var hasMigrations = db.Database.GetMigrations().Any();
+        var pending       = db.Database.GetPendingMigrations().ToList();
 
-        // IMPORTANT: use migrations only (EnsureCreated is removed)
-        db.Database.Migrate();
-
-        // Sanity: make sure key tables exist after migrate
-        var bookingsExists = db.Database.ExecuteSqlRaw(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='Bookings'");
-        var blocksExists = db.Database.ExecuteSqlRaw(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='TrainerBlocks'");
-        if (bookingsExists == 0 || blocksExists == 0)
+        if (hasMigrations)
         {
-            app.Logger.LogError("!!! Table(s) missing after Migrate(). Check migrations are included in the app and connection string points to the right file.");
+            if (pending.Any())
+                app.Logger.LogWarning("Applying {Count} pending migration(s): {Names}",
+                    pending.Count, string.Join(", ", pending));
+            else
+                app.Logger.LogWarning("No pending migrations.");
+
+            db.Database.Migrate();
+        }
+        else
+        {
+            app.Logger.LogWarning("No migrations found at runtime. Calling EnsureCreated() to bootstrap schema.");
+            db.Database.EnsureCreated(); // creates tables from current model
         }
 
         // Seed only if empty
@@ -85,9 +90,10 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        app.Logger.LogError(ex, "DB migrate/seed failed");
+        app.Logger.LogError(ex, "DB initialise/migrate/seed failed");
     }
 }
+
 
 // -------- Middleware pipeline --------
 if (app.Environment.IsDevelopment())
