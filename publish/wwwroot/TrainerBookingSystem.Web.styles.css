@@ -1,0 +1,178 @@
+/* _content/TrainerBookingSystem.Web/Pages/Shared/_Layout.cshtml.rz.scp.css */
+/* Site-wide link styling */
+a.navbar-brand[b-11cc5vjmwd] {
+  white-space: normal;
+  text-align: center;
+  word-break: break-all;
+  color: #c62828; /* match theme */
+}
+
+a[b-11cc5vjmwd] {
+  color: #c62828; /* all links red */
+}
+
+/* Primary buttons */
+.btn-primary[b-11cc5vjmwd] {
+  color: #fff;
+  background-color: #c62828;  /* was blue */
+  border-color: #a61d1d;      /* darker red for border */
+}
+
+.nav-pills .nav-link.active[b-11cc5vjmwd], 
+.nav-pills .show > .nav-link[b-11cc5vjmwd] {
+  color: #fff;
+  background-color: #c62828;  /* active tab red */
+  border-color: #a61d1d;
+}
+
+/* General borders */
+.border-top[b-11cc5vjmwd] {
+  border-top: 1px solid #e5e5e5;
+}
+.border-bottom[b-11cc5vjmwd] {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* Shadows (no colour change here, just style) */
+.box-shadow[b-11cc5vjmwd] {
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+}
+
+/* Policy button */
+button.accept-policy[b-11cc5vjmwd] {
+  font-size: 1rem;
+  line-height: inherit;
+  background-color: #c62828; /* make it match */
+  color: #fff;
+  border: 1px solid #a61d1d;
+}
+
+/* Footer */
+.footer[b-11cc5vjmwd] {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px;
+  color: #c62828; /* match red theme */
+}
+
+/* --- Extra bit for calendar events --- */
+.event[b-11cc5vjmwd], .event a[b-11cc5vjmwd], .fc-event[b-11cc5vjmwd], .fc-event-title[b-11cc5vjmwd] {
+  color: #c62828 !important;  /* event text red */
+  white-space: normal;
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================
+   Accent + Bootstrap bridge
+   ========================= */
+/* Make Bootstrap-style primaries use accent red */
+:root[b-11cc5vjmwd] {
+  --bs-primary: var(--accent);
+  --bs-link-color: var(--accent);
+  --bs-link-hover-color: color-mix(in srgb, var(--accent) 85%, black 20%);
+}
+
+/* Global links use accent */
+a[b-11cc5vjmwd] { color: var(--accent); }
+a:hover[b-11cc5vjmwd] { color: var(--bs-link-hover-color); }
+
+/* =========================
+   Calendar / schedule text
+   ========================= */
+/* Force event links/titles to be red, not blue */
+.cal-cell a[b-11cc5vjmwd],
+.cal-grid a[b-11cc5vjmwd],
+.booking-item a[b-11cc5vjmwd],
+.card .booking-item a[b-11cc5vjmwd],
+[class*="event"] a[b-11cc5vjmwd],
+.link-primary[b-11cc5vjmwd] {
+  color: var(--accent) !important;
+  text-decoration: none;
+}
+
+/* If any badges/pills in events use “primary”, make them red too */
+.badge-primary[b-11cc5vjmwd],
+.text-primary[b-11cc5vjmwd] {
+  color: var(--accent) !important;
+}
+
+/* =========================
+   Keep writing inside boxes
+   ========================= */
+.cal-cell[b-11cc5vjmwd],
+.booking-item[b-11cc5vjmwd],
+[class*="event"][b-11cc5vjmwd] {
+  white-space: normal;
+  word-break: break-word;   /* break long words */
+  overflow: hidden;         /* no leaking text */
+  text-overflow: ellipsis;  /* show "..." if clipped */
+}
+
+/* Make anchor behave like a block so it doesn’t poke out */
+.cal-cell a[b-11cc5vjmwd],
+.booking-item a[b-11cc5vjmwd],
+[class*="event"] a[b-11cc5vjmwd] {
+  display: block;
+  line-height: 1.2;
+}
+
+/* Optional: slightly stronger red outline on selected/hovered cells */
+.cal-cell:hover[b-11cc5vjmwd] { border-color: var(--accent); }
+.cal-cell.selected[b-11cc5vjmwd] { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Use accent red everywhere Bootstrap expects "primary" */
+:root[b-11cc5vjmwd] {
+  --bs-primary: var(--accent);
+  --bs-primary-rgb: 255, 90, 90;             /* rgb of #ff5a5a */
+  --bs-link-color: var(--accent);
+  --bs-link-hover-color: color-mix(in srgb, var(--accent) 85%, black 20%);
+}
+
+/* Normal links */
+a[b-11cc5vjmwd] { color: var(--accent) !important; }
+a:hover[b-11cc5vjmwd] { color: var(--bs-link-hover-color) !important; }
+
+/* Bootstrap helpers that often force the blue */
+.text-primary[b-11cc5vjmwd],
+.link-primary[b-11cc5vjmwd],
+.btn-link[b-11cc5vjmwd],
+.page-link[b-11cc5vjmwd],
+.nav-link[b-11cc5vjmwd],
+.badge.bg-primary[b-11cc5vjmwd],
+.bg-primary[b-11cc5vjmwd],
+.border-primary[b-11cc5vjmwd] {
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+}
+
+/* Specific to your schedule/cards (tighten later if the markup is shared) */
+.side-panel a[b-11cc5vjmwd],
+.cal-grid a[b-11cc5vjmwd],
+.cal-cell a[b-11cc5vjmwd],
+.booking-item a[b-11cc5vjmwd],
+.card .booking-item a[b-11cc5vjmwd],
+[class*="event"] a[b-11cc5vjmwd] {
+  color: var(--accent) !important;
+  text-decoration: none;
+}
+
+/* Keep writing inside boxes */
+.cal-cell[b-11cc5vjmwd],
+.booking-item[b-11cc5vjmwd],
+[class*="event"][b-11cc5vjmwd] {
+  white-space: normal;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-cell a[b-11cc5vjmwd],
+.booking-item a[b-11cc5vjmwd],
+[class*="event"] a[b-11cc5vjmwd] {
+  display: block;
+  line-height: 1.25;
+}

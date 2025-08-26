@@ -1,0 +1,492 @@
+/* =========================================================
+   Theme tokens & base
+   ========================================================= */
+:root[data-theme="light"]{
+  --bg:#fff; --text:#121212; --muted:#6a6a6a;
+  --card:#f5f5f5; --border:#d1d1d1;
+  --accent:#a03a3a; --accent-contrast:#fff5f5;
+  --pill-bg:rgba(255,90,90,.15); --pill-border:rgba(255,90,90,.35);
+  --nav-link:#121212; --nav-brand:#121212;
+  --panel-bg:#f7f8fa; --panel-border:#cfd3db;
+  --panel-card-bg:#fff; --panel-subcard-bg:#fafbfc;
+  /* events */
+  --event-bg:#f3f5f9;
+  --event-border:#d6dbe6;
+  --event-shadow:0 2px 8px rgba(0,0,0,.06);
+  /* chips (info/purple) */
+  --chip-info-bg:#efe9ff; --chip-info-text:#4c1d95; --chip-info-border:#7c3aed66;
+}
+
+.chip-block { background:#3a0d0d; border:1px solid #b44; color:#ffdede; }
+.chip-gap   { background:#1f2b1f; border:1px solid #4a9; color:#dff6df; }
+
+:root[data-theme="dark"]{
+  --bg:#0c0c10; --text:#f0f1f4; --muted:#c0c5cf;
+  --card:#1e1f25; --border:#343741;
+  --accent:#b92525; --accent-contrast:#140a0a;
+  --pill-bg:rgba(202, 63, 63, 0.637); --pill-border:rgba(255,90,90,.35);
+  --panel-bg:#16181d; --panel-border:#3b404b;
+  --panel-card-bg:#1b1f26; --panel-subcard-bg:#202631;
+  /* events */
+  --event-bg:#671a1a;
+  --event-border:#782525;
+  --event-shadow:0 2px 10px rgba(0,0,0,.35);
+  /* chips (info/purple) */
+  --chip-info-bg:#241a34; --chip-info-text:#c4b5fd; --chip-info-border:#7c3aed66;
+}
+
+html,body{
+  height:100%; margin:0; padding:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+  background:var(--bg); color:var(--text); line-height:1.55;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+}
+body{ display:flex; flex-direction:column; min-height:100vh; }
+.content-wrapper{ flex:1; display:flex; flex-direction:column; }
+main{ flex:1; }
+a{ color:var(--accent); }
+a:hover{ color: color-mix(in srgb, var(--accent) 85%, black 20%); }
+
+/* =========================================================
+   Navbar
+   ========================================================= */
+.navbar{ background:var(--card); color:var(--text); border-color:var(--border); padding:.6rem 1rem; }
+.navbar .nav-link{ color:var(--nav-link)!important; font-weight:600; font-size:1rem; margin-right:16px; }
+.navbar .nav-link:hover{ color:var(--accent)!important; }
+.top-nav-brand{ font-weight:800; font-size:1.1rem; color:var(--nav-brand); letter-spacing:.3px; }
+#themeToggle{ font-size:1.2rem; border:2px solid var(--transparent); background:var(--transparent); border-radius:10px; padding:4px 10px; color:var(--text); }
+
+/* =========================================================
+   Buttons & badges
+   ========================================================= */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:8px 12px; border:1px solid var(--border); border-radius:10px;
+  background:var(--card); color:var(--text); font-weight:600; text-decoration:none;
+  line-height:1; vertical-align:middle; box-sizing:border-box;
+}
+.btn:hover{ border-color:var(--accent); }
+.btn-ghost{ background:transparent; border-color:var(--border); }
+.btn-accent{ border-color:var(--accent); background:var(--accent); }
+.btn-sm{ padding:6px 10px; height:32px; font-size:.9rem; border-radius:10px; }
+.btn-xs{ padding:4px 10px; font-size:.8rem; border-radius:8px; line-height:1.2; }
+
+.btn-icon, .btn-icon-xs{
+  display:grid; place-items:center; padding:0; border:1px solid var(--border);
+  background:var(--card); color:var(--text); border-radius:8px;
+}
+.btn-icon{ width:40px; height:40px; }
+.btn-icon-xs{ width:26px; height:26px; }
+.btn-icon:hover, .btn-icon-xs:hover{ border-color:var(--accent); }
+
+/* Big rounded CTA (Sessions header) */
+.btn-cta{
+  display:inline-grid; grid-auto-flow:column; place-items:center; gap:8px;
+  padding:12px 20px; min-height:48px; border-radius:14px; font-size:1rem;
+}
+
+/* Circular +/- buttons in counters */
+.btn-circle{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:40px; height:40px; border-radius:999px; border:1px solid var(--border);
+  background:var(--card); color:var(--text); font-weight:900; font-size:1.2rem; line-height:1;
+  display:grid; place-items:center; cursor:pointer;
+}
+.btn-circle:hover{ border-color:var(--accent); }
+.btn-circle-left{ left:10px; } .btn-circle-right{ right:10px; }
+
+/* Pills / badges */
+.badge{
+  font-size:.85rem; font-weight:600; color:var(--text);
+  background:var(--pill-bg); border:1px solid var(--pill-border);
+  border-radius:999px; padding:3px 10px;
+}
+
+/* =========================================================
+   Cards & headings
+   ========================================================= */
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:12px; color:var(--text); box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+.card + .card{ margin-top:12px; }
+.card h2{ margin:0 0 8px; }
+
+/* Header rows that sit inside cards (safe – no Bootstrap bleed) */
+.card-head, .card-header{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;
+  background:transparent!important; border:0!important; box-shadow:none!important;
+}
+.card-head h2, .card-header h2{ margin:0; }
+
+/* Pencil in card corner (Overview) */
+.card{ position:relative; }
+section.card > a.btn-icon-xs{
+  position:absolute; top:20px; right:20px;
+  width:40px; height:40px; border-radius:12px; display:grid; place-items:center;
+}
+
+/* =========================================================
+   Client header (Back | avatar | name)
+   ========================================================= */
+.client-header{
+  display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:nowrap;
+}
+.client-header .back{ height:40px; padding:8px 14px; font-size:1rem; border-radius:12px; white-space:nowrap; }
+.client-title-inline{ display:flex; align-items:center; gap:8px; min-height:40px; flex:1 1 auto; min-width:0; }
+.client-title{ margin:0; font-weight:800; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.avatar-emoji{ font-size:1.8em; line-height:1; transform:translateY(-1px); }
+
+/* =========================================================
+   Key–value grid (Overview)
+   ========================================================= */
+.kv{ display:grid; grid-template-columns:140px 1fr; column-gap:12px; row-gap:10px; align-items:center; }
+.kv > div:first-child{ font-weight:700; }
+
+/* =========================================================
+   Chips
+   ========================================================= */
+.chip{ display:inline-block; white-space:nowrap; padding:.2rem .6rem; border-radius:9999px; font-size:.85rem; font-weight:500; line-height:1.4; background:#262b33; color:#eef2f7; }
+.chip-info{ background:var(--chip-info-bg); color:var(--chip-info-text); border:1px solid var(--chip-info-border); }
+.chip-green{ background:#14532d; color:#22c55e; }
+.chip-red{ background:#5b0a0a; color:#f87171; }
+.chip-muted{ background: color-mix(in srgb, var(--card) 85%, black 15%); color: var(--muted); border:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+
+/* =========================================================
+   Sessions area
+   ========================================================= */
+.session-boxes{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:8px;
+}
+.counter-box{
+  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  row-gap:6px; padding:22px 56px; background: color-mix(in oklab, var(--card) 92%, black 8%);
+  border:1px solid var(--border); border-radius:12px; min-height:96px;
+}
+.counter-title{ font-weight:700; text-align:center; width:100%; }
+.counter-value{ font-weight:900; font-size:2rem; line-height:1; }
+@media (max-width:480px){
+  .counter-box{ padding:18px 46px; }
+  .btn-circle{ width:34px; height:34px; font-size:1rem; }
+  .counter-value{ font-size:1.6rem; }
+}
+
+.block-unavailable{
+  background: rgba(255, 80, 80, 0.15);
+  border-color: rgba(255, 80, 80, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+/* =========================================================
+   Booking list tiles (Upcoming / Recent)
+   ========================================================= */
+.booking-list{ list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+.booking-item{
+  display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center;
+  background: color-mix(in oklab, var(--card) 88%, black 12%);
+  border:1px solid color-mix(in oklab, var(--border) 80%, black 20%);
+  border-radius:10px; padding:12px;
+}
+.booking-item .b-time{ font-weight:700; }
+.booking-item .b-type{ color:#cbd1dc; }
+.booking-item .b-actions{ display:flex; gap:6px; }
+@media (max-width:820px){ .booking-item{ grid-template-columns:1fr; } }
+
+/* =========================================================
+   Side panel
+   ========================================================= */
+.side-panel{
+  background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:12px; padding:12px;
+  align-self:start; position:sticky; top:16px; color:var(--text);
+}
+.side-panel h3{ color:var(--text); font-weight:800; letter-spacing:.2px; }
+.side-panel .btn{ color:var(--text); border-color:var(--panel-border); }
+.side-panel .btn:hover{ border-color:var(--accent); }
+.side-panel .card{ background:var(--panel-card-bg); border:1px solid var(--panel-border); }
+.side-panel .card .card{ background:var(--panel-subcard-bg); border-color:var(--panel-border); }
+
+/* =========================================================
+   Calendar
+   ========================================================= */
+.cal-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-bottom:6px; color:var(--muted); font-weight:700; }
+.cal-weekdays>div{ padding:4px 0; text-align:center; }
+.cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
+.cal-cell{
+  display:block; background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:10px; min-height:86px; position:relative; text-decoration:none; color:var(--text);
+}
+.cal-cell:hover{ border-color:var(--accent); }
+.cal-cell.muted{ opacity:.45; }
+.cal-cell.selected{ outline:2px solid var(--accent); outline-offset:1px; }
+.cal-date{ font-weight:800; color:var(--accent); }
+.cal-count{
+  position:absolute; right:8px; bottom:8px; font-size:.75rem;
+  background:var(--pill-bg); border:1px solid var(--pill-border);
+  border-radius:999px; padding:2px 6px; line-height:1;
+}
+
+/* =========================================================
+   Tables (Bootstrap default + custom "slim" clients table)
+   ========================================================= */
+.table { background:var(--card); color:var(--text); }
+.table th, .table td { background:var(--card); color:var(--text); border-color:var(--border); }
+.table thead th{ background: color-mix(in oklab, var(--card) 85%, black 15%); font-weight:800; }
+.table-striped > tbody > tr:nth-of-type(odd) > *{ background: color-mix(in oklab, var(--card) 94%, black 6%); }
+.table-hover > tbody > tr:hover > *{ background: color-mix(in oklab, var(--card) 88%, black 12%); }
+.table a{ color:var(--accent)!important; }
+
+/* Clients table – slim variant (Name + meta chips | Sessions pills) */
+.client-table.slim{
+  width:100%; border:1px solid var(--border); border-radius:12px; background:var(--card); overflow:hidden;
+}
+.client-table.slim thead th{
+  font-weight:800; padding:10px 12px; background:color-mix(in oklab, var(--card) 92%, black 8%);
+  border-bottom:1px solid var(--border);
+}
+.client-table.slim tbody td{ padding:10px 12px; vertical-align:middle; border-top:1px solid color-mix(in oklab, var(--border) 70%, transparent); }
+.client-table.slim tbody tr:hover{ background: color-mix(in oklab, var(--card) 88%, white 6%); }
+.client-table.slim td.name a{ font-weight:800; color:var(--accent)!important; text-decoration:none; }
+.client-table.slim td.name .meta{ margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; }
+.pills{ display:flex; gap:8px; align-items:center; }
+.pill{
+  display:inline-block; min-width:34px; text-align:center; padding:4px 8px;
+  border:1px solid var(--border); border-radius:999px; line-height:1; font-weight:800;
+}
+.pill-green{ background:#14532d; color:#22c55e; border-color: color-mix(in srgb, #22c55e 25%, black 50%); }
+.pill-muted{ background: color-mix(in srgb, var(--card) 85%, black 15%); color: var(--muted); }
+
+/* =========================================================
+   Day schedule (timeline)
+   ========================================================= */
+.day-schedule{
+  position:relative; width:100%; background:var(--card); border:1px solid var(--border);
+  border-radius:10px; overflow:hidden; margin-top:4px; box-sizing:border-box;
+}
+
+/* hour grid */
+.hour-row{
+  position:absolute; left:0; right:0;
+  top:calc(var(--hour-top) * var(--px-per-min) * 1px);
+  height:calc(60 * var(--px-per-min));
+}
+.hour-label{ position:absolute; left:8px; width:var(--time-col); font-size:.8rem; color:var(--muted); top:-7px; }
+.hour-line{ position:absolute; left:calc(var(--time-col) + 6px); right:8px; top:0; height:1px; background:color-mix(in srgb, var(--border) 85%, transparent); }
+
+/* events column */
+.events-layer{ position:relative; margin-left:calc(var(--time-col) + 12px); margin-right:8px; padding-bottom:8px; }
+
+/* event block */
+.event{
+  position:absolute; left:0; right:0;
+  top:calc(var(--start-min) * var(--px-per-min) * 1px);
+  height:calc(var(--dur-min) * var(--px-per-min) * 1px);
+  box-sizing:border-box;
+  background:var(--event-bg);
+  border:1px solid var(--event-border);
+  border-radius:10px;
+  box-shadow:var(--event-shadow);
+  overflow:hidden;
+  z-index:1;
+}
+.event.selected{ z-index:2; outline:2px solid var(--accent); outline-offset:0; }
+
+/* content: time | name on one row; meta below; pill reserved on right */
+.event-click{
+  padding:10px 110px 48px 12px;             /* right=space for pill; bottom=for actions */
+  display:grid; grid-template-columns:auto 1fr; grid-template-areas:"t n" "m m";
+  column-gap:10px; align-items:baseline;
+}
+.event-time{ grid-area:t; margin:0; font-weight:800; font-size:.95rem; }
+.event-title{
+  grid-area:n; margin:0; font-weight:700; line-height:1.15; min-width:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.event-meta{ grid-area:m; margin-top:3px; color:var(--muted); }
+
+/* action pill pinned bottom-right */
+.event-actions{ position:absolute; right:10px; bottom:8px; display:flex; gap:6px; }
+
+/* =========================================================
+    Management Quick Actions ⚡
+   ========================================================= */
+
+   /* Layout */
+.quick-actions .qa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+/* Compact buttons that match a dark UI */
+.btn-slim {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border, #3d3d3d);
+  background: var(--btn-bg, #2a2a2a);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn-slim:hover { filter: brightness(1.1); }
+
+/* Import form sits inline with buttons */
+.qa-import {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Pretty file input */
+.file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.file input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.file-button {
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--border, #545454);
+  background: var(--file-bg, #1f1f1f);
+  user-select: none;
+}
+.file-name {
+  opacity: 0.85;
+  white-space: nowrap;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Stats --- */
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:0.75rem;
+}
+.stat{
+  display:flex;
+  align-items:baseline;
+  gap:0.5rem;
+  padding:0.6rem 0.8rem;
+  border:1px solid var(--border,#3d3d3d);
+  background:var(--card,#222);
+  border-radius:0.7rem;
+}
+.stat-num{
+  font-weight:800;
+  font-size:1.15rem;
+  letter-spacing:0.2px;
+}
+.stat-label{ opacity:0.85; }
+
+/* --- Quick Actions toolbar --- */
+.qa-toolbar{
+  display:flex;
+  align-items:center;
+  gap:0.6rem;
+  flex-wrap:wrap;
+}
+.qa-left{ display:flex; gap:0.6rem; flex-wrap:wrap; }
+.qa-spacer{ flex:1 1 auto; } /* pushes import to right when space allows */
+
+.btn-slim{
+  display:inline-flex; align-items:center; gap:0.45rem;
+  padding:0.42rem 0.7rem; border-radius:0.6rem;
+  border:1px solid var(--border,#3d3d3d);
+  background:var(--btn-bg,#2a2a2a); text-decoration:none; color:inherit;
+}
+.btn-slim:hover{ filter:brightness(1.08); }
+
+/* File input prettified */
+.qa-import{ display:inline-flex; align-items:center; gap:0.5rem; }
+.file{ position:relative; display:inline-flex; align-items:center; gap:0.5rem; }
+.file input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+.file-button{
+  padding:0.35rem 0.6rem; border-radius:0.5rem;
+  border:1px dashed var(--border,#545454); background:var(--file-bg,#1f1f1f);
+}
+.file-name{ max-width:18rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0.85; }
+
+/* --- Recent list --- */
+.recent-list{
+  list-style:none; margin:0; padding:0;
+  display:grid; gap:0.35rem;
+}
+.recent-list li{
+  display:grid; grid-template-columns: 14.5rem 1fr; gap:0.75rem; align-items:baseline;
+}
+.recent-list time{
+  opacity:0.8; font-variant-numeric: tabular-nums; white-space:nowrap;
+}
+@media (max-width:640px){
+  .recent-list li{ grid-template-columns:1fr; }
+}
+
+.stat-num { color: #47b212; } /* or your brand colour */
+
+/* ===== Mobile tweaks for Quick Actions ===== */
+@media (max-width: 740px){
+  /* Stack the whole toolbar vertically with nice spacing */
+  .qa-toolbar{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  /* Turn the left button cluster into a responsive grid */
+  .qa-left{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+  }
+
+  /* Hide spacer so Import row sits beneath */
+  .qa-spacer{ display: none; }
+
+  /* Import row becomes a 2-column grid:
+     - file chooser grows, Import button sits on the right */
+  .qa-import{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  /* Make file control fluid and readable */
+  .file{ width: 100%; }
+  .file-button{
+    width: 100%;
+    text-align: center;
+  }
+  .file-name{
+    justify-self: start;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.85;
+  }
+
+  /* Buttons look better centred when they become grid items */
+  .qa-left .btn-slim{ justify-content: center; }
+}
+
+@media (max-width: 420px){
+  /* On very narrow phones, hide the noisy filename text */
+  .file-name{ display: none; }
+}
+
+

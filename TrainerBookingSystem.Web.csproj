@@ -4,6 +4,15 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- IMPORTANT: avoid Windows-only binaries on Linux Azure -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+    <SelfContained>false</SelfContained>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Do NOT set a Windows RID when deploying to Linux.
+         If it's ever needed to be self-contained on Linux, uncomment the next line and set SelfContained=true
+         <RuntimeIdentifier>linux-x64</RuntimeIdentifier> -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,9 +27,10 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- keep SQLite files out of the repo/publish -->
   <ItemGroup>
-    <Content Remove="App_Data\*.db" />
     <None Remove="App_Data\*.db" />
+    <Content Remove="App_Data\*.db" />
   </ItemGroup>
 
 </Project>
