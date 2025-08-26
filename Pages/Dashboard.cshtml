@@ -108,10 +108,14 @@
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                             <div style="font-weight:800;">@card.Date.ToString("dddd dd MMM")</div>
 
-                            <div style="display:flex;gap:6px;align-items:center;">
+                            <div style="display:flex;gap:6px;align-items:flex-start;">
                                 <span class="muted" id="selcount-@dateIso" style="font-size:.9rem;"></span>
                                 <button type="button" class="btn" onclick="handleCancel('@dateIso')">Cancel</button>
                                 <button type="button" class="btn" onclick="handleAmend('@dateIso')">Amend</button>
+                                <form method="post" asp-page-handler="OpenBlock" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-secondary">🚫</button>
+                                </form>
                             </div>
                         </div>
 
@@ -127,7 +131,7 @@
                             var scaledHeight = (int)Math.Round(totalMin * pxPerMin);
                         }
 
-                        @if (!card.Bookings.Any())
+                        @if (!card.Bookings.Any() && !card.Blocks.Any())
                         {
                             <div style="color:var(--muted);margin-top:8px;">No bookings yet.</div>
                         }
@@ -145,8 +149,37 @@
                                     </div>
                                 }
 
-                                @* Events layer *@
+                                @* ===== Inside the schedule: BLOCK BANDS (behind bookings) ===== *@
                                 <div class="events-layer">
+                                    @* Blocks first (z-index lower) *@
+                                    @foreach (var bl in card.Blocks)
+                                    {
+                                        var rawStart = bl.StartTime;
+                                        var rawEnd   = bl.StartTime + bl.Duration;
+
+                                        // clip to the visible window
+                                        var start = rawStart < dayStart ? dayStart : rawStart;
+                                        var end   = rawEnd   > dayEnd   ? dayEnd   : rawEnd;
+
+                                        if (end <= start) { continue; }
+
+                                        var offsetMin = Math.Max(0, (int)(start - dayStart).TotalMinutes);
+                                        var durMin    = Math.Max(1, (int)(end - start).TotalMinutes);
+
+                                        <div class="block-band"
+                                             style="--start-min:@offsetMin; --dur-min:@durMin;">
+                                            <div class="block-band-inner">
+                                                <span class="block-band-time">@start.ToString(@"hh\:mm")–@end.ToString(@"hh\:mm")</span>
+                                                @if (!string.IsNullOrWhiteSpace(bl.Note))
+                                                {
+                                                    <span class="block-band-note">@bl.Note</span>
+                                                }
+                                            </div>
+
+                                        </div>
+                                    }
+
+                                    @* ===== Events (bookings) above blocks ===== *@
                                     @foreach (var b in card.Bookings.OrderBy(b => b.StartTime))
                                     {
                                         var start = b.StartTime < dayStart ? dayStart : b.StartTime;
@@ -156,7 +189,7 @@
                                         var offsetMin = Math.Max(0, (int)(start - dayStart).TotalMinutes);
                                         var durMin    = Math.Max(60, (int)(end - start).TotalMinutes); // min 60 mins
 
-                                        <div class="event"
+                                        <div class="event z-10"
                                              data-booking-id="@b.Id"
                                              onclick="toggleEvent(this, '@dateIso')"
                                              style="--start-min:@offsetMin; --dur-min:@durMin;">
@@ -166,18 +199,18 @@
                                                     @(b.Client?.Name ?? "Unknown client")
                                                 </div>
 
-                                            <div class="event-meta">@b.SessionType • @(b.Duration.TotalMinutes) mins</div>
+                                                <div class="event-meta">@b.SessionType • @(b.Duration.TotalMinutes) mins</div>
 
-                                            <div class="event-actions">
-                                                <a class="btn btn-ghost btn-xs"
-                                                asp-page="/Details"
-                                                asp-route-id="@b.ClientId"
-                                                onclick="event.stopPropagation();">
-                                                    View client
-                                                </a>
+                                                <div class="event-actions">
+                                                    <a class="btn btn-ghost btn-xs"
+                                                       asp-page="/Details"
+                                                       asp-route-id="@b.ClientId"
+                                                       onclick="event.stopPropagation();">
+                                                        View client
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
                                     }
                                 </div>
                             </div>
@@ -222,13 +255,66 @@
     .hour-label { position:absolute; left:8px; width:var(--time-col); font-size:.8rem; color:var(--muted); top:-7px; }
     .hour-line { position:absolute; left:calc(var(--time-col) + 6px); right:8px; top:0; height:1px; background: color-mix(in srgb, var(--border) 85%, transparent); }
 
-    .events-layer { position:relative; margin-left:calc(var(--time-col) + 12px); margin-right:8px; }
+    .events-layer { position:relative; margin-left:calc(var(--time-col) + 12px); margin-right:8px; height:100%; }
+
     .event { position:absolute; left:0; right:0; top:calc(var(--start-min) * var(--px-per-min) * 1px); height:calc(var(--dur-min) * var(--px-per-min) * 1px); box-sizing:border-box; }
     .event.selected { outline:2px solid var(--accent); outline-offset:0; }
-    .event-click { padding:8px 10px; }
-    .event-time { font-weight:800; font-size:.9rem; margin-bottom:2px; }
-    .event-title { font-weight:700; }
-    .event-meta { font-size:.8rem; color:var(--muted); }
+    .event .event-click { padding:8px 10px; }
+    .event .event-time { font-weight:800; font-size:.9rem; margin-bottom:2px; }
+    .event .event-title { font-weight:700; }
+    .event .event-meta { font-size:.8rem; color:var(--muted); }
+
+    /* Blocks as subtle bands behind bookings */
+    .block-band{
+        position:absolute;
+        left:0; right:0;
+        top:calc(var(--start-min) * var(--px-per-min) * 1px);
+        height:calc(var(--dur-min) * var(--px-per-min) * 1px);
+        border:1px solid rgba(220, 80, 80, 0.45);
+        border-radius:10px;
+        background:
+          repeating-linear-gradient(
+            45deg,
+            rgba(220, 80, 80, 0.18) 0px,
+            rgba(220, 80, 80, 0.18) 10px,
+            rgba(220, 80, 80, 0.10) 10px,
+            rgba(220, 80, 80, 0.10) 20px
+          );
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+        pointer-events:none; /* don't steal clicks from bookings */
+        z-index:0;
+        display:flex; align-items:flex-start;
+    }
+
+    .block-band-inner{
+    position:relative;
+    width:100%;
+    height:100%;
+    font-size:.8rem;
+    font-weight:600;
+    }
+
+    .block-band-time{
+    background:rgba(0,0,0,0.55);
+    color:#fff;
+    border-radius:4px;
+    padding:2px 6px;
+    position:absolute;
+    top:4px;
+    left:6px;
+    }
+
+    .block-band-note{
+    font-size:.75rem;
+    color:#fff;
+    background:rgba(0,0,0,0.4);
+    border-radius:4px;
+    padding:2px 6px;
+    position:absolute;
+    bottom:4px;
+    right:6px;
+    }
+
 </style>
 
 <script>
@@ -282,3 +368,46 @@
   };
 })();
 </script>
+
+@if (Model.ShowBlockModal)
+{
+  <div class="app-modal-backdrop show">
+    <div class="app-modal" role="dialog" aria-modal="true" aria-label="Block time">
+      <h3>Block time</h3>
+
+      <form method="post" asp-page-handler="CreateBlock">
+        @Html.AntiForgeryToken()
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="lbl">Date</label>
+            <input asp-for="BlockInput.Date" type="date" class="input" />
+            <span asp-validation-for="BlockInput.Date" class="val"></span>
+          </div>
+
+          <div>
+            <label class="lbl">Start</label>
+            <input asp-for="BlockInput.StartTime" type="time" class="input" />
+            <span asp-validation-for="BlockInput.StartTime" class="val"></span>
+          </div>
+
+          <div>
+            <label class="lbl">Duration (mins)</label>
+            <input asp-for="BlockInput.DurationMinutes" type="number" min="5" max="720" step="5" class="input" />
+            <span asp-validation-for="BlockInput.DurationMinutes" class="val"></span>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="lbl">Note (optional)</label>
+            <input asp-for="BlockInput.Note" class="input" />
+          </div>
+        </div>
+
+        <div class="mt-4 flex gap-2">
+          <button type="submit" class="btn">Save</button>
+          <button formaction="?handler=CloseModals" formmethod="post" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

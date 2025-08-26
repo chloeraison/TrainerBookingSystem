@@ -17,6 +17,9 @@
   --chip-info-bg:#efe9ff; --chip-info-text:#4c1d95; --chip-info-border:#7c3aed66;
 }
 
+.chip-block { background:#3a0d0d; border:1px solid #b44; color:#ffdede; }
+.chip-gap   { background:#1f2b1f; border:1px solid #4a9; color:#dff6df; }
+
 :root[data-theme="dark"]{
   --bg:#0c0c10; --text:#f0f1f4; --muted:#c0c5cf;
   --card:#1e1f25; --border:#343741;
@@ -169,6 +172,12 @@ section.card > a.btn-icon-xs{
   .counter-value{ font-size:1.6rem; }
 }
 
+.block-unavailable{
+  background: rgba(255, 80, 80, 0.15);
+  border-color: rgba(255, 80, 80, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
 /* =========================================================
    Booking list tiles (Upcoming / Recent)
    ========================================================= */
@@ -297,3 +306,187 @@ section.card > a.btn-icon-xs{
 
 /* action pill pinned bottom-right */
 .event-actions{ position:absolute; right:10px; bottom:8px; display:flex; gap:6px; }
+
+/* =========================================================
+    Management Quick Actions ⚡
+   ========================================================= */
+
+   /* Layout */
+.quick-actions .qa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+/* Compact buttons that match a dark UI */
+.btn-slim {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border, #3d3d3d);
+  background: var(--btn-bg, #2a2a2a);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn-slim:hover { filter: brightness(1.1); }
+
+/* Import form sits inline with buttons */
+.qa-import {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Pretty file input */
+.file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.file input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.file-button {
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--border, #545454);
+  background: var(--file-bg, #1f1f1f);
+  user-select: none;
+}
+.file-name {
+  opacity: 0.85;
+  white-space: nowrap;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Stats --- */
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:0.75rem;
+}
+.stat{
+  display:flex;
+  align-items:baseline;
+  gap:0.5rem;
+  padding:0.6rem 0.8rem;
+  border:1px solid var(--border,#3d3d3d);
+  background:var(--card,#222);
+  border-radius:0.7rem;
+}
+.stat-num{
+  font-weight:800;
+  font-size:1.15rem;
+  letter-spacing:0.2px;
+}
+.stat-label{ opacity:0.85; }
+
+/* --- Quick Actions toolbar --- */
+.qa-toolbar{
+  display:flex;
+  align-items:center;
+  gap:0.6rem;
+  flex-wrap:wrap;
+}
+.qa-left{ display:flex; gap:0.6rem; flex-wrap:wrap; }
+.qa-spacer{ flex:1 1 auto; } /* pushes import to right when space allows */
+
+.btn-slim{
+  display:inline-flex; align-items:center; gap:0.45rem;
+  padding:0.42rem 0.7rem; border-radius:0.6rem;
+  border:1px solid var(--border,#3d3d3d);
+  background:var(--btn-bg,#2a2a2a); text-decoration:none; color:inherit;
+}
+.btn-slim:hover{ filter:brightness(1.08); }
+
+/* File input prettified */
+.qa-import{ display:inline-flex; align-items:center; gap:0.5rem; }
+.file{ position:relative; display:inline-flex; align-items:center; gap:0.5rem; }
+.file input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+.file-button{
+  padding:0.35rem 0.6rem; border-radius:0.5rem;
+  border:1px dashed var(--border,#545454); background:var(--file-bg,#1f1f1f);
+}
+.file-name{ max-width:18rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0.85; }
+
+/* --- Recent list --- */
+.recent-list{
+  list-style:none; margin:0; padding:0;
+  display:grid; gap:0.35rem;
+}
+.recent-list li{
+  display:grid; grid-template-columns: 14.5rem 1fr; gap:0.75rem; align-items:baseline;
+}
+.recent-list time{
+  opacity:0.8; font-variant-numeric: tabular-nums; white-space:nowrap;
+}
+@media (max-width:640px){
+  .recent-list li{ grid-template-columns:1fr; }
+}
+
+.stat-num { color: #47b212; } /* or your brand colour */
+
+/* ===== Mobile tweaks for Quick Actions ===== */
+@media (max-width: 740px){
+  /* Stack the whole toolbar vertically with nice spacing */
+  .qa-toolbar{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  /* Turn the left button cluster into a responsive grid */
+  .qa-left{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+  }
+
+  /* Hide spacer so Import row sits beneath */
+  .qa-spacer{ display: none; }
+
+  /* Import row becomes a 2-column grid:
+     - file chooser grows, Import button sits on the right */
+  .qa-import{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  /* Make file control fluid and readable */
+  .file{ width: 100%; }
+  .file-button{
+    width: 100%;
+    text-align: center;
+  }
+  .file-name{
+    justify-self: start;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.85;
+  }
+
+  /* Buttons look better centred when they become grid items */
+  .qa-left .btn-slim{ justify-content: center; }
+}
+
+@media (max-width: 420px){
+  /* On very narrow phones, hide the noisy filename text */
+  .file-name{ display: none; }
+}
+
+

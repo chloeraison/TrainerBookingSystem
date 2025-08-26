@@ -25,8 +25,8 @@ public class Client
 
     public string? Flags { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // optional back‑ref
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();

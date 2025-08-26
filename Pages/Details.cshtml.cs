@@ -147,11 +147,56 @@ namespace TrainerBookingSystem.Web.Pages
                 return Page();
             }
 
+            // ---- Clash checks (blocks + other bookings) ----
+            var targetDate  = NewBooking.Date.Date;
+            var targetStart = NewBooking.StartTime;
+            var targetEnd   = targetStart + TimeSpan.FromMinutes(NewBooking.DurationMinutes);
+
+            // Blocks first (cannot be overridden)
+            var blocks = await _db.TrainerBlocks
+                .Where(x => x.Date == targetDate)
+                .ToListAsync();
+
+            foreach (var bl in blocks)
+            {
+                var blStart = bl.StartTime;
+                var blEnd   = bl.StartTime + bl.Duration;
+                if (targetStart < blEnd && targetEnd > blStart)
+                {
+                    ModelState.AddModelError("",
+                        $"Overlaps with a block {blStart:hh\\:mm}–{blEnd:hh\\:mm} ({bl.Note ?? "Unavailable"}).");
+                }
+            }
+
+            // Bookings on same day
+            var others = await _db.Bookings
+                .Where(b => b.Status == BookingStatus.Scheduled && b.Date == targetDate)
+                .Include(b => b.Client)
+                .ToListAsync();
+
+            foreach (var ob in others)
+            {
+                var obStart = ob.StartTime;
+                var obEnd   = ob.StartTime + ob.Duration;
+                if (targetStart < obEnd && targetEnd > obStart)
+                {
+                    ModelState.AddModelError("",
+                        $"Clashes with {ob.Client?.Name ?? "another booking"} @ {obStart:hh\\:mm}–{obEnd:hh\\:mm}.");
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                ShowNewBooking = true;
+                return Page();
+            }
+
+            // ---- Create booking ----
             var booking = new Booking
             {
                 ClientId    = Client.Id,
-                Date        = NewBooking.Date.Date,
-                StartTime   = NewBooking.StartTime,
+                Date        = targetDate,
+                StartTime   = targetStart,
                 Duration    = TimeSpan.FromMinutes(NewBooking.DurationMinutes),
                 SessionType = NewBooking.SessionType,
                 Status      = BookingStatus.Scheduled,
@@ -251,17 +296,35 @@ namespace TrainerBookingSystem.Web.Pages
             var targetStart = NewStartLocal.TimeOfDay;
             var targetEnd   = targetStart + booking.Duration;
 
+            Conflicts.Clear();
+
+            // ---- Blocks (hard stop; cannot override) ----
+            var blocks = await _db.TrainerBlocks
+                .Where(x => x.Date == targetDate)
+                .ToListAsync();
+
+            foreach (var bl in blocks)
+            {
+                var blStart = bl.StartTime;
+                var blEnd   = bl.StartTime + bl.Duration;
+
+                if (targetStart < blEnd && targetEnd > blStart)
+                {
+                    Conflicts.Add($"BLOCK: {blStart:hh\\:mm} – {blEnd:hh\\:mm} ({bl.Note ?? "Unavailable"})");
+                }
+            }
+
+            // ---- Other bookings ----
             var others = await _db.Bookings
                 .Where(b => b.Status == BookingStatus.Scheduled && b.Date == targetDate && b.Id != booking.Id)
                 .Include(b => b.Client)
                 .ToListAsync();
 
-            Conflicts.Clear();
             var clashes = new List<Booking>();
             foreach (var ob in others)
             {
                 var obStart = ob.StartTime;
-                var obEnd = ob.StartTime + ob.Duration;
+                var obEnd   = ob.StartTime + ob.Duration;
                 if (targetStart < obEnd && targetEnd > obStart)
                 {
                     clashes.Add(ob);
@@ -272,7 +335,17 @@ namespace TrainerBookingSystem.Web.Pages
             var shouldOverride = Request.Form["override"].ToString()
                 .Equals("true", StringComparison.OrdinalIgnoreCase);
 
-            if (Conflicts.Any() && !shouldOverride)
+            // If any BLOCK conflict exists -> always show modal (cannot override)
+            var hasBlockConflict = Conflicts.Any(c => c.StartsWith("BLOCK:"));
+            if (hasBlockConflict)
+            {
+                EditBookingId = booking.Id;
+                ShowEditModal = true;
+                return Page();
+            }
+
+            // Booking conflicts can be overridden
+            if (clashes.Any() && !shouldOverride)
             {
                 EditBookingId = booking.Id;
                 ShowEditModal = true;

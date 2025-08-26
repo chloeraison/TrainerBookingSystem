@@ -9,6 +9,8 @@ public class AppDbContext : DbContext
 
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<TrainerBlock> TrainerBlocks => Set<TrainerBlock>();
+
 
     protected override void OnModelCreating(ModelBuilder b)
     {

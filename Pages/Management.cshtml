@@ -1,67 +1,96 @@
 @page
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @model TrainerBookingSystem.Web.Pages.ManagementModel
 @{
     ViewData["Title"] = "Management";
+    var now = DateTime.Today;
 }
 
-<section class="page-header">
+<section class="page-title">
     <h1>🛠️ Management</h1>
     <p class="muted">Admin tools and stats to help you run the show.</p>
 </section>
 
-<div class="management-grid">
+<!-- ===== Summary ===== -->
+<section class="card">
+    <h2>📊 Stats</h2>
+    <div class="stats-grid">
+    <div class="stat">
+        <span class="stat-num">@Model.TotalClients</span>
+        <span class="stat-label">Total Clients</span>
+    </div>
+    <div class="stat">
+        <span class="stat-num">@Model.WeekBookings</span>
+        <span class="stat-label">Bookings This Week</span>
+    </div>
+    <div class="stat">
+        <span class="stat-num">@Model.MonthBookings</span>
+        <span class="stat-label">Bookings This Month</span>
+    </div>
+    <div class="stat">
+        <span class="stat-num">@Model.WeekCancellations</span>
+        <span class="stat-label">Cancellations (This Week)</span>
+    </div>
+    </div>
+</section>
 
-    <!-- Summary Stats -->
+<!-- ===== Quick actions (hide by setting ShowQuickActions=false in PageModel) ===== -->
+@if (Model.ShowQuickActions)
+{
     <section class="card">
-        <h2>📊 Summary</h2>
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-num">@Model.TotalClients</div>
-                <div class="stat-label">Total Clients</div>
+        <div class="panel quick-actions">
+            <h3>⚡ Quick Actions</h3>
+
+            <div class="qa-toolbar">
+            <div class="qa-left">
+                <a asp-page="/Clients/Create" class="btn-slim">＋ Add Client</a>
+                <a asp-page="/Calendar/Index" class="btn-slim">📅 View Calendar</a>
+                <a asp-page-handler="Export" class="btn-slim">⬇ Export Data</a>
             </div>
-            <div class="stat">
-                <div class="stat-num">@Model.BookingsThisWeek</div>
-                <div class="stat-label">Bookings This Week</div>
+
+            <div class="qa-spacer"></div>
+
+            <form method="post" enctype="multipart/form-data" asp-page-handler="Import" class="qa-import">
+                <label class="file">
+                <input type="file" name="importFile" accept=".csv">
+                <span class="file-button">Choose File</span>
+                <span class="file-name" data-filename>No file chosen</span>
+                </label>
+                <button type="submit" class="btn-slim">⬆ Import Data</button>
+            </form>
             </div>
-            <div class="stat">
-                <div class="stat-num">@Model.CancellationsThisWeek</div>
-                <div class="stat-label">Cancellations</div>
-            </div>
+
         </div>
     </section>
+}
 
-    <!-- Quick Actions -->
-    <section class="card">
-        <h2>⚡ Quick Actions</h2>
-        <div class="quick-actions">
-            <a class="btn btn-danger" asp-page="/Clients/New">
-                <span class="me-1">+</span> Add Client
-            </a>
-            <a class="btn" asp-page="/Calendar">📅 View Calendar</a>
-            <a class="btn btn-ghost" href="#">⬇ Export Data</a>
-        </div>
-    </section>
+<!-- ===== Recent changes (optional simple feed) ===== -->
+<section class="card">
+    <h2>📂 Recent Changes</h2>
 
-    <!-- Recent Changes -->
-    <section class="card span-2">
-        <h2>🗂️ Recent Changes</h2>
-        @if (!Model.RecentChanges.Any())
+    @if (!Model.Recent.Any())
+    {
+        <p class="muted">No recent activity.</p>
+    }
+    else
+    {
+        <ul class="recent-list">
+        @foreach (var item in Model.Recent)
         {
-            <p class="muted">No recent activity.</p>
+        <li>
+            <time>@item.When.ToString("dd MMM yyyy · HH:mm")</time>
+            <span>@item.Message</span>
+        </li>
         }
-        else
-        {
-            <ul class="booking-list compact">
-                @foreach (var change in Model.RecentChanges)
-                {
-                    <li class="booking-item">
-                        <div class="b-time">@change.Date.ToString("dd MMM yyyy · HH:mm")</div>
-                        <div class="b-type">@change.Description</div>
-                    </li>
-                }
-            </ul>
-        }
-    </section>
+    </ul>
+    }
+</section>
 
-</div>
+<script>
+document.addEventListener('change', e => {
+  if (e.target.matches('input[type="file"][name="importFile"]')) {
+    const name = e.target.files?.[0]?.name ?? 'No file chosen';
+    e.target.closest('label.file')?.querySelector('[data-filename]')?.replaceChildren(name);
+  }
+});
+</script>
+
