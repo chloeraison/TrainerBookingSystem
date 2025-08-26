@@ -36,17 +36,16 @@ if (builder.Environment.IsDevelopment())
 var app = builder.Build();
 app.Logger.LogInformation("Using SQLite DB at: {Path}", dbFile);
 
-// -------- Create/upgrade DB, then seed if empty --------
+// -------- Apply migrations (no EnsureCreated), then seed if empty --------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     try
     {
-        // Log the exact file path & write a breadcrumb file next to the DB
+        // Log exact DB path + breadcrumb file
         var dbPath = db.Database.GetDbConnection().DataSource ?? "(unknown)";
         app.Logger.LogWarning(">>> Using SQLite DB at: {Path}", dbPath);
-
         try
         {
             var marker = Path.Combine(Path.GetDirectoryName(dbPath) ?? ".", "BOOT.txt");
@@ -54,20 +53,24 @@ using (var scope = app.Services.CreateScope())
         }
         catch { /* ignore file write errors */ }
 
-        // Force-create schema for brand-new/empty files
-        db.Database.EnsureCreated();
+        // Show pending migrations (useful in prod logs)
+        var pending = db.Database.GetPendingMigrations().ToList();
+        if (pending.Any())
+            app.Logger.LogWarning("Applying {Count} pending migration(s): {Names}", pending.Count, string.Join(", ", pending));
+        else
+            app.Logger.LogWarning("No pending migrations.");
 
-        // Then attempt to run migrations (if any exist in the assembly)
+        // IMPORTANT: use migrations only (EnsureCreated is removed)
         db.Database.Migrate();
 
-        // Sanity check: does Bookings exist?
-        var bookingsExists = db.Database
-            .ExecuteSqlRaw("SELECT 1 FROM sqlite_master WHERE type='table' AND name='Bookings'");
-
-        if (bookingsExists == 0)
+        // Sanity: make sure key tables exist after migrate
+        var bookingsExists = db.Database.ExecuteSqlRaw(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='Bookings'");
+        var blocksExists = db.Database.ExecuteSqlRaw(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='TrainerBlocks'");
+        if (bookingsExists == 0 || blocksExists == 0)
         {
-            app.Logger.LogError("!!! Bookings table still missing after EnsureCreated/Migrate. " +
-                                "Model/migrations mismatch or wrong DB path.");
+            app.Logger.LogError("!!! Table(s) missing after Migrate(). Check migrations are included in the app and connection string points to the right file.");
         }
 
         // Seed only if empty
@@ -77,16 +80,14 @@ using (var scope = app.Services.CreateScope())
             app.Logger.LogWarning(">>> Seeded sample data.");
         }
 
-        app.Logger.LogWarning(">>> DB ready: Clients={Clients} Bookings={Bookings}",
-            db.Clients.Count(), db.Bookings.Count());
+        app.Logger.LogWarning(">>> DB ready: Clients={Clients} Bookings={Bookings} Blocks={Blocks}",
+            db.Clients.Count(), db.Bookings.Count(), db.TrainerBlocks.Count());
     }
     catch (Exception ex)
     {
         app.Logger.LogError(ex, "DB migrate/seed failed");
     }
 }
-
-
 
 // -------- Middleware pipeline --------
 if (app.Environment.IsDevelopment())
