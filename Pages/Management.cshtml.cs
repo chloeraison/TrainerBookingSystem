@@ -1,18 +1,25 @@
 using System.Globalization;
 using System.Text;
-using Microsoft.AspNetCore.Http; // <— for IFormFile
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using TrainerBookingSystem.Web.Data;
 using TrainerBookingSystem.Web.Models;
+using TrainerBookingSystem.Web.Services;
 
 namespace TrainerBookingSystem.Web.Pages
 {
     public class ManagementModel : PageModel
     {
         private readonly AppDbContext _db;
-        public ManagementModel(AppDbContext db) => _db = db;
+        private readonly IWhatsAppService _wa;
+
+        public ManagementModel(AppDbContext db, IWhatsAppService wa)
+        {
+            _db = db;
+            _wa = wa;
+        }
 
         // Toggle quick actions row on/off
         public bool ShowQuickActions { get; set; } = true;
@@ -23,7 +30,7 @@ namespace TrainerBookingSystem.Web.Pages
         public int MonthBookings { get; private set; }
         public int WeekCancellations { get; private set; }
 
-        // Simple recent feed (optional)
+        // Recent feed
         public record RecentItem(DateTime When, string Message);
         public List<RecentItem> Recent { get; private set; } = new();
 
@@ -52,7 +59,7 @@ namespace TrainerBookingSystem.Web.Pages
                 b.Status == BookingStatus.Cancelled &&
                 b.Date >= startOfWeek && b.Date < endOfWeek);
 
-            // Build a lightweight changes feed from CreatedAt/UpdatedAt + status
+            // Recent items from bookings
             var recentBookings = await _db.Bookings
                 .OrderByDescending(b => b.UpdatedAt)
                 .Take(20)
@@ -71,10 +78,9 @@ namespace TrainerBookingSystem.Web.Pages
                     _ => $"Booking change for {who}"
                 };
                 return new RecentItem(when.ToLocalTime(), msg);
-            })
-            .ToList();
+            }).ToList();
 
-            // You could also add client creations if you track CreatedAt on Client.
+            // Add recent client creations if available
             var recentClients = await _db.Clients
                 .OrderByDescending(c => c.CreatedAt)
                 .Take(10)
@@ -83,13 +89,10 @@ namespace TrainerBookingSystem.Web.Pages
             Recent.AddRange(recentClients.Select(c =>
                 new RecentItem((c.CreatedAt ?? DateTime.UtcNow).ToLocalTime(), $"Added new client: {c.Name}")));
 
-            Recent = Recent
-                .OrderByDescending(r => r.When)
-                .Take(25)
-                .ToList();
+            Recent = Recent.OrderByDescending(r => r.When).Take(25).ToList();
         }
 
-        // GET /Management?handler=Export  → returns a CSV of clients & bookings
+        // ===== Export =====
         public async Task<FileContentResult> OnGetExportAsync()
         {
             var sb = new StringBuilder();
@@ -118,15 +121,8 @@ namespace TrainerBookingSystem.Web.Pages
             sb.AppendLine("Bookings");
             sb.AppendLine("Id,ClientId,ClientName,Date,StartTime,DurationMinutes,Type,Status,CreatedAt,UpdatedAt");
 
-            // Fetch first, then order in memory to avoid TimeSpan ORDER BY on SQLite
-            var bookings = await _db.Bookings
-                .Include(b => b.Client)
-                .ToListAsync();
-
-            bookings = bookings
-                .OrderBy(b => b.Date)
-                .ThenBy(b => b.StartTime)
-                .ToList();
+            var bookings = await _db.Bookings.Include(b => b.Client).ToListAsync();
+            bookings = bookings.OrderBy(b => b.Date).ThenBy(b => b.StartTime).ToList();
 
             foreach (var b in bookings)
             {
@@ -151,7 +147,6 @@ namespace TrainerBookingSystem.Web.Pages
             {
                 if (val is null) return "";
                 var s = val.ToString() ?? "";
-                // escape commas/quotes/newlines
                 if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
                 {
                     s = s.Replace("\"", "\"\"");
@@ -161,7 +156,7 @@ namespace TrainerBookingSystem.Web.Pages
             }
         }
 
-        // POST /Management (form posts to ?handler=Import) → imports CSV in the same format as Export
+        // ===== Import =====
         public async Task<IActionResult> OnPostImportAsync(IFormFile importFile)
         {
             if (importFile == null || importFile.Length == 0)
@@ -173,11 +168,8 @@ namespace TrainerBookingSystem.Web.Pages
             using var reader = new StreamReader(importFile.OpenReadStream(), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
             var content = await reader.ReadToEndAsync();
 
-            // Split on CRLF/CR/LF and drop empty rows
-            var lines = content
-                .Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+            var lines = content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
 
-            // simple state machine: first "Clients" section, then "Bookings"
             var isClients = false;
             var isBookings = false;
 
@@ -185,13 +177,12 @@ namespace TrainerBookingSystem.Web.Pages
             {
                 if (line.StartsWith("Clients", StringComparison.OrdinalIgnoreCase)) { isClients = true; isBookings = false; continue; }
                 if (line.StartsWith("Bookings", StringComparison.OrdinalIgnoreCase)) { isClients = false; isBookings = true; continue; }
-                if (line.StartsWith("Id,", StringComparison.OrdinalIgnoreCase)) continue; // skip headers
+                if (line.StartsWith("Id,", StringComparison.OrdinalIgnoreCase)) continue;
 
                 var cols = ParseCsv(line);
 
                 if (isClients)
                 {
-                    // Id,Name,Phone,Email,Gym,PreferredTime,SessionsLeft,SessionsCompleted,OnHoliday,CreatedAt,UpdatedAt
                     var c = new Client
                     {
                         Name = cols.ElementAtOrDefault(1) ?? "",
@@ -209,7 +200,6 @@ namespace TrainerBookingSystem.Web.Pages
                 }
                 else if (isBookings)
                 {
-                    // Id,ClientId,ClientName,Date,StartTime,DurationMinutes,Type,Status,CreatedAt,UpdatedAt
                     var durationMins = int.TryParse(cols.ElementAtOrDefault(5), NumberStyles.Integer, CultureInfo.InvariantCulture, out var dur) ? dur : 60;
 
                     var b = new Booking
@@ -246,6 +236,21 @@ namespace TrainerBookingSystem.Web.Pages
             }
             values.Add(sb.ToString());
             return values;
+        }
+
+        // ===== WhatsApp: simple test action =====
+        public async Task<IActionResult> OnPostSendWhatsAppTestAsync()
+        {
+            if (!_wa.IsConfigured())
+            {
+                TempData["Error"] = "WhatsApp isn’t configured yet. Add WhatsApp:Token and WhatsApp:PhoneNumberId in appsettings/Azure.";
+                return RedirectToPage();
+            }
+
+            var demoPhone = "+447000000000"; // set your number to test
+            await _wa.SendTextAsync(demoPhone, "Test from Management page ✅");
+            TempData["Message"] = "WhatsApp test sent.";
+            return RedirectToPage();
         }
     }
 }

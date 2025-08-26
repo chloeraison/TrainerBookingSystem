@@ -4,13 +4,22 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using TrainerBookingSystem.Web.Data;
 using TrainerBookingSystem.Web.Models;
+using TrainerBookingSystem.Web.Services;
+
+
 
 namespace TrainerBookingSystem.Web.Pages
 {
     public class DetailsModel : PageModel
     {
         private readonly AppDbContext _db;
-        public DetailsModel(AppDbContext db) => _db = db;
+        private readonly IWhatsAppService _wa;   // ← add
+
+        public DetailsModel(AppDbContext db, IWhatsAppService wa)  // ← inject WA
+        {
+            _db = db;
+            _wa = wa;
+        }
 
         [BindProperty(SupportsGet = true)] public int Id { get; set; }
 
@@ -72,12 +81,12 @@ namespace TrainerBookingSystem.Web.Pages
 
             EditClient = new EditClientInput
             {
-                Phone         = Client.Phone,
-                Email         = Client.Email,
-                Gym           = Client.Gym,
+                Phone = Client.Phone,
+                Email = Client.Email,
+                Gym = Client.Gym,
                 PreferredTime = Client.PreferredTime,
-                Notes         = Client.Notes,
-                OnHoliday     = Client.OnHoliday
+                Notes = Client.Notes,
+                OnHoliday = Client.OnHoliday
             };
 
             await LoadClientAndLists();
@@ -97,13 +106,13 @@ namespace TrainerBookingSystem.Web.Pages
                 return Page();
             }
 
-            dbClient.Phone         = EditClient.Phone?.Trim();
-            dbClient.Email         = EditClient.Email?.Trim();
-            dbClient.Gym           = EditClient.Gym?.Trim();
+            dbClient.Phone = EditClient.Phone?.Trim();
+            dbClient.Email = EditClient.Email?.Trim();
+            dbClient.Gym = EditClient.Gym?.Trim();
             dbClient.PreferredTime = string.IsNullOrWhiteSpace(EditClient.PreferredTime) ? null : EditClient.PreferredTime!.Trim();
-            dbClient.Notes         = EditClient.Notes;
-            dbClient.OnHoliday     = EditClient.OnHoliday;
-            dbClient.UpdatedAt     = DateTime.UtcNow;
+            dbClient.Notes = EditClient.Notes;
+            dbClient.OnHoliday = EditClient.OnHoliday;
+            dbClient.UpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
             return RedirectToPage(new { id = Id });
@@ -117,10 +126,10 @@ namespace TrainerBookingSystem.Web.Pages
 
             var start = Client.PreferredTime?.ToLowerInvariant() switch
             {
-                "morning"   => new TimeSpan(9, 0, 0),
+                "morning" => new TimeSpan(9, 0, 0),
                 "afternoon" => new TimeSpan(14, 0, 0),
-                "evening"   => new TimeSpan(18, 0, 0),
-                _           => new TimeSpan(9, 0, 0)
+                "evening" => new TimeSpan(18, 0, 0),
+                _ => new TimeSpan(9, 0, 0)
             };
 
             NewBooking = new NewBookingInput
@@ -148,9 +157,9 @@ namespace TrainerBookingSystem.Web.Pages
             }
 
             // ---- Clash checks (blocks + other bookings) ----
-            var targetDate  = NewBooking.Date.Date;
+            var targetDate = NewBooking.Date.Date;
             var targetStart = NewBooking.StartTime;
-            var targetEnd   = targetStart + TimeSpan.FromMinutes(NewBooking.DurationMinutes);
+            var targetEnd = targetStart + TimeSpan.FromMinutes(NewBooking.DurationMinutes);
 
             // Blocks first (cannot be overridden)
             var blocks = await _db.TrainerBlocks
@@ -160,7 +169,7 @@ namespace TrainerBookingSystem.Web.Pages
             foreach (var bl in blocks)
             {
                 var blStart = bl.StartTime;
-                var blEnd   = bl.StartTime + bl.Duration;
+                var blEnd = bl.StartTime + bl.Duration;
                 if (targetStart < blEnd && targetEnd > blStart)
                 {
                     ModelState.AddModelError("",
@@ -177,7 +186,7 @@ namespace TrainerBookingSystem.Web.Pages
             foreach (var ob in others)
             {
                 var obStart = ob.StartTime;
-                var obEnd   = ob.StartTime + ob.Duration;
+                var obEnd = ob.StartTime + ob.Duration;
                 if (targetStart < obEnd && targetEnd > obStart)
                 {
                     ModelState.AddModelError("",
@@ -194,20 +203,35 @@ namespace TrainerBookingSystem.Web.Pages
             // ---- Create booking ----
             var booking = new Booking
             {
-                ClientId    = Client.Id,
-                Date        = targetDate,
-                StartTime   = targetStart,
-                Duration    = TimeSpan.FromMinutes(NewBooking.DurationMinutes),
+                ClientId = Client.Id,
+                Date = targetDate,
+                StartTime = targetStart,
+                Duration = TimeSpan.FromMinutes(NewBooking.DurationMinutes),
                 SessionType = NewBooking.SessionType,
-                Status      = BookingStatus.Scheduled,
-                CreatedAt   = DateTime.UtcNow,
-                UpdatedAt   = DateTime.UtcNow
+                Status = BookingStatus.Scheduled,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
             _db.Bookings.Add(booking);
             await _db.SaveChangesAsync();
 
+            // --- WhatsApp confirmation (safe no-op until creds are set) ---
+            if (!string.IsNullOrWhiteSpace(Client?.Phone))
+            {
+                var when = (booking.Date + booking.StartTime).ToString("ddd dd MMM · HH:mm");
+                var text =
+                    $"✅ Booking confirmed!\n" +
+                    $"Client: {Client!.Name}\n" +
+                    $"When: {when}\n" +
+                    $"Type: {booking.SessionType} ({(int)booking.Duration.TotalMinutes} mins)\n" +
+                    (!string.IsNullOrWhiteSpace(Client.Gym) ? $"Gym: {Client.Gym}\n" : "") +
+                    $"See you then!";
+                await _wa.SendTextAsync(Client.Phone!, text);
+            }
+
             return RedirectToPage(new { id = Id });
+            
         }
 
         // ---------- Existing booking ops ----------
@@ -256,7 +280,7 @@ namespace TrainerBookingSystem.Web.Pages
             if (client is null) return NotFound();
 
             target = (target ?? "").Trim().ToLowerInvariant();
-            delta  = Math.Clamp(delta, -5, 5);
+            delta = Math.Clamp(delta, -5, 5);
 
             switch (target)
             {
@@ -268,13 +292,13 @@ namespace TrainerBookingSystem.Web.Pages
                     {
                         var take = Math.Min(delta, client.SessionsLeft);
                         client.SessionsCompleted += take;
-                        client.SessionsLeft      -= take;
+                        client.SessionsLeft -= take;
                     }
                     else if (delta < 0)
                     {
                         var give = Math.Min(-delta, client.SessionsCompleted);
                         client.SessionsCompleted -= give;
-                        client.SessionsLeft      += give;
+                        client.SessionsLeft += give;
                     }
                     break;
                 default:
@@ -292,9 +316,9 @@ namespace TrainerBookingSystem.Web.Pages
                               .FirstOrDefaultAsync(b => b.Id == EditBookingId);
             if (booking is null) return await OnGetAsync();
 
-            var targetDate  = NewStartLocal.Date;
+            var targetDate = NewStartLocal.Date;
             var targetStart = NewStartLocal.TimeOfDay;
-            var targetEnd   = targetStart + booking.Duration;
+            var targetEnd = targetStart + booking.Duration;
 
             Conflicts.Clear();
 
@@ -306,7 +330,7 @@ namespace TrainerBookingSystem.Web.Pages
             foreach (var bl in blocks)
             {
                 var blStart = bl.StartTime;
-                var blEnd   = bl.StartTime + bl.Duration;
+                var blEnd = bl.StartTime + bl.Duration;
 
                 if (targetStart < blEnd && targetEnd > blStart)
                 {
@@ -324,7 +348,7 @@ namespace TrainerBookingSystem.Web.Pages
             foreach (var ob in others)
             {
                 var obStart = ob.StartTime;
-                var obEnd   = ob.StartTime + ob.Duration;
+                var obEnd = ob.StartTime + ob.Duration;
                 if (targetStart < obEnd && targetEnd > obStart)
                 {
                     clashes.Add(ob);
@@ -379,7 +403,7 @@ namespace TrainerBookingSystem.Web.Pages
 
             var now = DateTime.Now;
             var today = DateTime.Today;
-            var startOfWeek  = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
+            var startOfWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
             var startOfMonth = new DateTime(today.Year, today.Month, 1);
 
             var upcomingRaw = await _db.Bookings
@@ -404,7 +428,7 @@ namespace TrainerBookingSystem.Web.Pages
                 PreferredTimesChips.Add(Client.PreferredTime!);
 
             var fortnightStart = today;
-            var fortnightEnd   = today.AddDays(14);
+            var fortnightEnd = today.AddDays(14);
             Next2WeeksBookings = await _db.Bookings
                 .Where(b => b.ClientId == Id && b.Status == BookingStatus.Scheduled &&
                             b.Date >= fortnightStart && b.Date < fortnightEnd)
@@ -424,7 +448,7 @@ namespace TrainerBookingSystem.Web.Pages
 
         private Next2WeeksStatus GetNext2WeeksStatus(int clientId)
         {
-            var today   = DateTime.Today;
+            var today = DateTime.Today;
             var week1End = today.AddDays(7);
             var week2End = today.AddDays(14);
 

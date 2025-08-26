@@ -399,12 +399,12 @@ section.card > a.btn-icon-xs{
   gap:0.6rem;
   flex-wrap:wrap;
 }
-.qa-left{ display:flex; gap:0.6rem; flex-wrap:wrap; }
+.qa-left form.inline { display: contents; }
 .qa-spacer{ flex:1 1 auto; } /* pushes import to right when space allows */
 
 .btn-slim{
   display:inline-flex; align-items:center; gap:0.45rem;
-  padding:0.42rem 0.7rem; border-radius:0.6rem;
+  padding:0.42rem 0.6rem; border-radius:0.6rem;
   border:1px solid var(--border,#3d3d3d);
   background:var(--btn-bg,#2a2a2a); text-decoration:none; color:inherit;
 }

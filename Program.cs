@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TrainerBookingSystem.Web.Data; // AppDbContext + DummyData
+using TrainerBookingSystem.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,11 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
         b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)
     )
 );
+
+builder.Services.Configure<WhatsAppOptions>(
+    builder.Configuration.GetSection("WhatsApp"));
+
+builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>();
 
 // Dev logging for EF
 if (builder.Environment.IsDevelopment())

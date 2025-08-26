@@ -2,87 +2,87 @@
 @model TrainerBookingSystem.Web.Pages.ManagementModel
 @{
     ViewData["Title"] = "Management";
-    var now = DateTime.Today;
 }
 
 <section class="page-title">
-    <h1>🛠️ Management</h1>
-    <p class="muted">Admin tools and stats to help you run the show.</p>
+  <h1>🛠️ Management</h1>
+  <p class="muted">Admin tools and stats to help you run the show.</p>
 </section>
 
-<!-- ===== Summary ===== -->
+@* ---- feedback toasts ---- *@
+@if (TempData["Error"] is string err) { <div class="alert alert-error">@err</div> }
+@if (TempData["Message"] is string msg) { <div class="alert alert-success">@msg</div> }
+<style>
+  .alert{padding:.6rem .8rem;border-radius:.5rem;margin:.4rem 0}
+  .alert-success{background:#193d1b;border:1px solid #2a6b2e}
+  .alert-error{background:#3d1919;border:1px solid #6b2a2a}
+</style>
+
+<!-- ===== Stats ===== -->
 <section class="card">
-    <h2>📊 Stats</h2>
-    <div class="stats-grid">
-    <div class="stat">
-        <span class="stat-num">@Model.TotalClients</span>
-        <span class="stat-label">Total Clients</span>
-    </div>
-    <div class="stat">
-        <span class="stat-num">@Model.WeekBookings</span>
-        <span class="stat-label">Bookings This Week</span>
-    </div>
-    <div class="stat">
-        <span class="stat-num">@Model.MonthBookings</span>
-        <span class="stat-label">Bookings This Month</span>
-    </div>
-    <div class="stat">
-        <span class="stat-num">@Model.WeekCancellations</span>
-        <span class="stat-label">Cancellations (This Week)</span>
-    </div>
-    </div>
+  <h2>📊 Stats</h2>
+  <div class="stats-grid">
+    <div class="stat"><span class="stat-num">@Model.TotalClients</span><span class="stat-label">Total Clients</span></div>
+    <div class="stat"><span class="stat-num">@Model.WeekBookings</span><span class="stat-label">Bookings This Week</span></div>
+    <div class="stat"><span class="stat-num">@Model.MonthBookings</span><span class="stat-label">Bookings This Month</span></div>
+    <div class="stat"><span class="stat-num">@Model.WeekCancellations</span><span class="stat-label">Cancellations (This Week)</span></div>
+  </div>
 </section>
 
-<!-- ===== Quick actions (hide by setting ShowQuickActions=false in PageModel) ===== -->
+<!-- ===== Quick Actions ===== -->
 @if (Model.ShowQuickActions)
 {
-    <section class="card">
-        <div class="panel quick-actions">
-            <h3>⚡ Quick Actions</h3>
+  <section class="card">
+    <div class="panel quick-actions">
+      <h3>⚡ Quick Actions</h3>
 
-            <div class="qa-toolbar">
-            <div class="qa-left">
-                <a href="/Clients/New" class="btn-slim">＋ Add Client</a>
-                <a href="/Dashboard" class="btn-slim">📅 View Calendar</a>
-                <a asp-page-handler="Export" class="btn-slim">⬇ Export Data</a>
-            </div>
+      <div class="qa-toolbar">
+        <div class="qa-left">
+          <a href="/Clients/New" class="btn-slim">＋ Add Client</a>
+          <a href="/Dashboard" class="btn-slim">📅 View Calendar</a>
+          <a asp-page-handler="Export" class="btn-slim">⬇ Export Data</a>
 
-            <div class="qa-spacer"></div>
-
-            <form method="post" enctype="multipart/form-data" asp-page-handler="Import" class="qa-import">
-                <label class="file">
-                <input type="file" name="importFile" accept=".csv">
-                <span class="file-button">Choose File</span>
-                <span class="file-name" data-filename>No file chosen</span>
-                </label>
-                <button type="submit" class="btn-slim">⬆ Import Data</button>
-            </form>
-            </div>
-
+          <form method="post" asp-page-handler="SendWhatsAppTest" class="inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-slim">💬 WhatsApp</button>
+          </form>
         </div>
-    </section>
+
+        <div class="qa-spacer"></div>
+
+        <form method="post" enctype="multipart/form-data" asp-page-handler="Import" class="qa-import">
+          <label class="file">
+            <input type="file" name="importFile" accept=".csv">
+            <span class="file-button">Choose File</span>
+            <span class="file-name" data-filename>No file chosen</span>
+          </label>
+          <button type="submit" class="btn-slim">⬆ Import Data</button>
+        </form>
+      </div>
+    </div>
+  </section>
 }
 
-<!-- ===== Recent changes (optional simple feed) ===== -->
+<!-- ===== Recent changes ===== -->
 <section class="card">
-    <h2>📂 Recent Changes</h2>
+  <h2>📂 Recent Changes</h2>
 
-    @if (!Model.Recent.Any())
-    {
-        <p class="muted">No recent activity.</p>
-    }
-    else
-    {
-        <ul class="recent-list">
-        @foreach (var item in Model.Recent)
-        {
+  @if (!Model.Recent.Any())
+  {
+    <p class="muted">No recent activity.</p>
+  }
+  else
+  {
+    <ul class="recent-list">
+      @foreach (var item in Model.Recent)
+      {
         <li>
-            <time>@item.When.ToString("dd MMM yyyy · HH:mm")</time>
-            <span>@item.Message</span>
+          <time>@item.When.ToString("dd MMM yyyy · HH:mm")</time>
+          <span>@item.Message</span>
         </li>
-        }
+      }
     </ul>
-    }
+  }
 </section>
 
 <script>
@@ -93,4 +93,3 @@ document.addEventListener('change', e => {
   }
 });
 </script>
-
