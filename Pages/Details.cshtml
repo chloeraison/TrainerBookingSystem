@@ -91,7 +91,7 @@
         @if (!showWeek2.Any()) { <span class="chip chip-red">❌ No sessions</span> }
         else {
           foreach (var b in showWeek2) {
-            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime:hh\\:mm</span>
+            <span class="chip chip-green">✅ @b.Date.ToString("ddd d MMM") · @b.StartTime</span>
           }
           if (moreWeek2 > 0) { <span class="chip chip-blue">+@moreWeek2 more</span> }
         }
@@ -167,7 +167,7 @@
       @foreach (var b in Model.Upcoming)
       {
         <li class="booking-item">
-          <div class="b-time">@b.Date.ToString("ddd dd MMM") · @b.StartTime:hh\\:mm</div>
+          <div class="b-time">@b.Date.ToString("ddd dd MMM") · @b.StartTime</div>
           <div class="b-type">@($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")</div>
           <div class="b-actions">
             <form method="post" asp-page-handler="ViewBooking">
@@ -208,7 +208,7 @@
       @foreach (var b in Model.Recent)
       {
         <li class="booking-item">
-          <div class="b-time">@b.Date.ToString("ddd dd MMM") · @b.StartTime:hh\\:mm</div>
+          <div class="b-time">@b.Date.ToString("ddd dd MMM") · @b.StartTime</div>
           <div class="b-type">@($"{b.SessionType} ({(int)b.Duration.TotalMinutes} mins)")</div>
           <div class="b-actions">
             <form method="post" asp-page-handler="ViewBooking">

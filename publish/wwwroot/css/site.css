@@ -448,7 +448,11 @@ section.card > a.btn-icon-xs{
   }
 
   /* Turn the left button cluster into a responsive grid */
-  .qa-left form.inline { display: contents; }
+  .qa-left{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+  }
 
   /* Hide spacer so Import row sits beneath */
   .qa-spacer{ display: none; }
