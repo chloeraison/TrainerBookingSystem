@@ -4,6 +4,7 @@ using TrainerBookingSystem.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 // -------- Storage: SQLite file (Azure-safe path) --------
 string dbFile;
 var home = Environment.GetEnvironmentVariable("HOME"); // present on Azure
@@ -32,9 +33,7 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     )
 );
 
-builder.Services.Configure<WhatsAppOptions>(
-    builder.Configuration.GetSection("WhatsApp"));
-
+builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection("WhatsApp"));
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>();
 
 // Dev logging for EF

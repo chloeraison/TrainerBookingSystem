@@ -1,0 +1,81 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using TrainerBookingSystem.Web.Data;
+using TrainerBookingSystem.Web.Models;
+
+namespace TrainerBookingSystem.Web.Pages.Clients
+{
+    public class MergeDuplicatesModel : PageModel
+    {
+        private readonly AppDbContext _db;
+        public MergeDuplicatesModel(AppDbContext db) => _db = db;
+
+        // Used by the GET to show what will be merged
+        public List<GroupVm> Groups { get; private set; } = new();
+
+        public record GroupVm(Client Keep, List<Client> Duplicates);
+
+        // GET /Clients/MergeDuplicates – preview duplicate sets
+        public async Task OnGetAsync()
+        {
+            var clients = await _db.Clients.AsNoTracking().ToListAsync();
+
+            var buckets = clients
+                .GroupBy(c => new
+                {
+                    Name  = (c.Name  ?? "").Trim().ToLowerInvariant(),
+                    Email = (c.Email ?? "").Trim().ToLowerInvariant(),
+                    Phone = (c.Phone ?? "").Trim()
+                })
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            Groups = buckets.Select(g =>
+            {
+                var keep = g.OrderBy(c => c.Id).First();
+                var dups = g.Where(c => c.Id != keep.Id).OrderBy(c => c.Id).ToList();
+                return new GroupVm(keep, dups);
+            }).ToList();
+        }
+
+        // POST /Clients/MergeDuplicates – perform the merge
+        public async Task<IActionResult> OnPostAsync()
+        {
+            var clients = await _db.Clients.AsNoTracking().ToListAsync();
+
+            var buckets = clients
+                .GroupBy(c => new
+                {
+                    Name  = (c.Name  ?? "").Trim().ToLowerInvariant(),
+                    Email = (c.Email ?? "").Trim().ToLowerInvariant(),
+                    Phone = (c.Phone ?? "").Trim()
+                })
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            foreach (var g in buckets)
+            {
+                var keep   = g.OrderBy(c => c.Id).First();
+                var dupIds = g.Where(c => c.Id != keep.Id).Select(c => c.Id).ToList();
+                if (!dupIds.Any()) continue;
+
+                // Reassign bookings from dup clients to the kept client
+                var bookings = await _db.Bookings
+                    .Where(b => dupIds.Contains(b.ClientId))
+                    .ToListAsync();
+
+                foreach (var b in bookings)
+                    b.ClientId = keep.Id;
+
+                // Remove duplicate clients
+                var dups = await _db.Clients.Where(c => dupIds.Contains(c.Id)).ToListAsync();
+                _db.Clients.RemoveRange(dups);
+            }
+
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Duplicate clients merged.";
+            return RedirectToPage("/Management");
+        }
+    }
+}

@@ -237,20 +237,5 @@ namespace TrainerBookingSystem.Web.Pages
             values.Add(sb.ToString());
             return values;
         }
-
-        // ===== WhatsApp: simple test action =====
-        public async Task<IActionResult> OnPostSendWhatsAppTestAsync()
-        {
-            if (!_wa.IsConfigured())
-            {
-                TempData["Error"] = "WhatsApp isn’t configured yet ya silly monkey 🙈. Add WhatsApp:Token and WhatsApp:PhoneNumberId in appsettings/Azure.";
-                return RedirectToPage();
-            }
-
-            var demoPhone = "+447000000000"; // set your number to test
-            await _wa.SendTextAsync(demoPhone, "Test from Management page ✅");
-            TempData["Message"] = "WhatsApp test sent.";
-            return RedirectToPage();
-        }
     }
 }

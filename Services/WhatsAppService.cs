@@ -1,81 +1,64 @@
 using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
+using System.Net.Http.Json;
 using Microsoft.Extensions.Options;
 
-namespace TrainerBookingSystem.Web.Services;
-
-public sealed class WhatsAppOptions
+namespace TrainerBookingSystem.Web.Services
 {
-    public string Token { get; set; } = "";
-    public string PhoneNumberId { get; set; } = "";
-    public string DefaultCountryCode { get; set; } = "44"; // GB default
-}
-
-public interface IWhatsAppService
-{
-    Task SendTextAsync(string rawPhone, string body, CancellationToken ct = default);
-    bool IsConfigured();
-}
-
-public sealed class WhatsAppService : IWhatsAppService
-{
-    private readonly HttpClient _http;
-    private readonly WhatsAppOptions _opt;
-
-    public WhatsAppService(HttpClient http, IOptions<WhatsAppOptions> opt)
+    public sealed class WhatsAppOptions
     {
-        _http = http;
-        _opt  = opt.Value;
-
-        if (IsConfigured())
-        {
-            _http.BaseAddress = new Uri($"https://graph.facebook.com/v20.0/{_opt.PhoneNumberId}/");
-            _http.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _opt.Token);
-        }
+        public string? ApiKey { get; set; }
+        public string? PhoneNumberId { get; set; }
+        public string? BusinessId { get; set; }
+        public bool TestMode { get; set; } = true;
     }
 
-    public bool IsConfigured() =>
-        !string.IsNullOrWhiteSpace(_opt.Token) && !string.IsNullOrWhiteSpace(_opt.PhoneNumberId);
-
-    public async Task SendTextAsync(string rawPhone, string body, CancellationToken ct = default)
+    public interface IWhatsAppService
     {
-        if (!IsConfigured()) return; // quietly no-op until you add the real creds
-
-        var phone = Normalize(rawPhone, _opt.DefaultCountryCode);
-        if (string.IsNullOrEmpty(phone)) return;
-
-        var payload = new
-        {
-            messaging_product = "whatsapp",
-            to = phone,
-            type = "text",
-            text = new { body }
-        };
-
-        var json = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        using var resp = await _http.PostAsync("messages", json, ct);
-
-        // Optional minimal logging
-        if (!resp.IsSuccessStatusCode)
-        {
-            var msg = await resp.Content.ReadAsStringAsync(ct);
-            Console.WriteLine($"WhatsApp send failed: {(int)resp.StatusCode} {msg}");
-        }
+        bool IsConfigured { get; }
+        Task SendTextAsync(string to, string message, CancellationToken ct = default);
     }
 
-    private static string Normalize(string raw, string defaultCc)
+    public class WhatsAppService : IWhatsAppService
     {
-        if (string.IsNullOrWhiteSpace(raw)) return "";
-        var s = raw.Trim();
+        private readonly HttpClient _http;
+        private readonly ILogger<WhatsAppService> _log;
+        private readonly WhatsAppOptions _opt;
 
-        if (s.StartsWith("+")) return s;
+        public WhatsAppService(HttpClient http, IOptions<WhatsAppOptions> opt, ILogger<WhatsAppService> log)
+        {
+            _http = http;
+            _opt  = opt.Value;
+            _log  = log;
+        }
 
-        s = new string(s.Where(char.IsDigit).ToArray());
+        public bool IsConfigured =>
+            !string.IsNullOrWhiteSpace(_opt.ApiKey) &&
+            !string.IsNullOrWhiteSpace(_opt.PhoneNumberId);
 
-        if (s.StartsWith("00")) return "+" + s.Substring(2);
-        if (s.StartsWith("0"))  return "+" + defaultCc + s.Substring(1);
-        return "+" + s;
+        public async Task SendTextAsync(string to, string message, CancellationToken ct = default)
+        {
+            // Safe stub when not configured
+            if (!IsConfigured || _opt.TestMode)
+            {
+                _log.LogInformation("[WA stub] Would send to {To}: {Msg}", to, message);
+                return;
+            }
+
+            // Real call (leave commented until you have creds)
+            // var url = $"https://graph.facebook.com/v20.0/{_opt.PhoneNumberId}/messages";
+            // using var req = new HttpRequestMessage(HttpMethod.Post, url);
+            // req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ApiKey);
+            // req.Content = JsonContent.Create(new
+            // {
+            //     messaging_product = "whatsapp",
+            //     to,
+            //     type = "text",
+            //     text = new { body = message }
+            // });
+            // var res = await _http.SendAsync(req, ct);
+            // res.EnsureSuccessStatusCode();
+
+            await Task.CompletedTask;
+        }
     }
 }

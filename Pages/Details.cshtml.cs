@@ -231,7 +231,7 @@ namespace TrainerBookingSystem.Web.Pages
             }
 
             return RedirectToPage(new { id = Id });
-            
+
         }
 
         // ---------- Existing booking ops ----------
@@ -457,6 +457,22 @@ namespace TrainerBookingSystem.Web.Pages
             var week1 = q.Any(b => b.Date < week1End);
             var week2 = q.Any(b => b.Date >= week1End && b.Date < week2End);
             return new Next2WeeksStatus(week1 || week2, week1, week2);
+        }
+
+        public async Task<IActionResult> OnPostDeleteClientAsync(int id)
+        {
+            var client = await _db.Clients.Include(c => c.Bookings).FirstOrDefaultAsync(c => c.Id == id);
+            if (client == null) return NotFound();
+
+            // Remove related bookings first (or rely on cascade delete if configured)
+            if (client.Bookings != null)
+                _db.Bookings.RemoveRange(client.Bookings);
+
+            _db.Clients.Remove(client);
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = "Client deleted.";
+            return RedirectToPage("/Clients");
         }
     }
 }
